@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RA Murales</title>
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+
+    <!-- MindAR -->
+    <script src="https://unpkg.com/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+</head>
+
+<body>
+
+    <!-- Instrucciones -->
+    <div id="instructions">📷 Apunta la cámara al mural</div>
+
+    <!-- UI (botones futuros) -->
+    <div id="ui">
+        <button id="btnInfo">Info</button>
+        <button id="btnAudio">Audio</button>
+    </div>
+
+    <!-- Escena AR -->
+    <a-scene mindar-image="imageTargetSrc: ./assets/prueba_porto.mind; autoStart: true;" vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false">
+
+        <a-assets timeout="10000">
+            <video id="video" src="./assets/video.mp4" preload="auto" loop muted playsinline
+                crossorigin="anonymous"></video>
+        </a-assets>
+
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+        <!-- TARGET -->
+        <a-entity id="target" mindar-image-target="targetIndex: 0">
+
+            <!-- VIDEO SOBRE EL MURAL -->
+            <a-video id="videoPlane" src="#video" width="1.2" height="0.7" position="0 0 0" rotation="0 0 0"></a-video>
+
+        </a-entity>
+
+    </a-scene>
+
+    <!-- Script -->
+    <script src="main.js"></script>
+
+</body>
+
+</html>
