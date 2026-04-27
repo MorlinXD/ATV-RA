@@ -78,7 +78,8 @@ button:hover { background:#555; }
 <a-scene 
   embedded
   cursor="rayOrigin: mouse"
-  raycaster="objects: .draggable">
+  raycaster="objects: .draggable"
+  style="touch-action: none;">
 
   <a-assets id="assets"></a-assets>
 
@@ -139,7 +140,7 @@ document.getElementById("imgBase").addEventListener("change", e => {
 
 // ===== GALERÍA =====
 async function cargarGaleria(){
-  const res = await fetch("./assets.json");
+  const res = await fetch("assets.json");
   const assets = await res.json();
 
   const cont = document.getElementById("galeria");
@@ -285,7 +286,7 @@ function guardar(){
   alert("JSON generado en consola");
 }
 
-// ===== DRAG PRO =====
+// ===== DRAG =====
 let dragging = false;
 let current = null;
 let startX = 0;
@@ -353,6 +354,27 @@ document.addEventListener("mousemove", (e) => {
 document.addEventListener("mouseup", () => {
   dragging = false;
   current = null;
+});
+
+// ===== ZOOM =====
+let zoom = 1;
+
+sceneEl.addEventListener("wheel", (e) => {
+  e.preventDefault();
+
+  if (e.deltaY < 0) {
+    zoom *= 1.1;
+  } else {
+    zoom *= 0.9;
+  }
+
+  zoom = Math.min(Math.max(zoom, 0.5), 5);
+
+  const root = document.getElementById("root");
+  const mural = document.getElementById("mural");
+
+  root.object3D.scale.set(zoom, zoom, zoom);
+  mural.object3D.scale.set(zoom, zoom, zoom);
 });
 
 </script>
