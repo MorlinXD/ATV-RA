@@ -134,8 +134,25 @@ document.getElementById("imgBase").addEventListener("change", e => {
     document.getElementById("assets").appendChild(img);
   }
 
+  img.onload = () => {
+
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+
+    const ratio = w / h;
+
+    const baseWidth = 3; // puedes cambiar esto
+    const baseHeight = baseWidth / ratio;
+
+    const mural = document.getElementById("mural");
+
+    mural.setAttribute("src","#baseImg");
+    mural.setAttribute("width", baseWidth);
+    mural.setAttribute("height", baseHeight);
+
+  };
+
   img.setAttribute("src", url);
-  document.getElementById("mural").setAttribute("src","#baseImg");
 });
 
 // ===== GALERÍA =====
