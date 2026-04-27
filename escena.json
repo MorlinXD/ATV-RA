@@ -2,7 +2,7 @@
   "elementos": [
     {
       "id": "obj0",
-      "asset": "video.mp4",
+      "asset": "/assets/video.mp4",
       "position": {
         "x": 0.7,
         "y": -0.4,
