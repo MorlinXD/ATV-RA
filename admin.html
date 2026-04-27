@@ -383,12 +383,41 @@
             current = null;
         });
 
-        // ===== ZOOM =====
+        // ===== ZOOM + PROFUNDIDAD (Z) =====
         let zoom = 1;
 
         sceneEl.addEventListener("wheel", (e) => {
             e.preventDefault();
 
+            // ===== MODO PROFUNDIDAD (SHIFT) =====
+            if (e.shiftKey && seleccionado) {
+
+                const obj = document.getElementById(seleccionado.id);
+
+                let z = seleccionado.position.z;
+
+                if (e.deltaY < 0) {
+                    z += 0.02; // hacia el usuario
+                } else {
+                    z -= 0.02; // hacia el mural
+                }
+
+                // límites (evita desaparecer o atravesar)
+                z = Math.min(Math.max(z, -1), 2);
+
+                seleccionado.position.z = z;
+
+                obj.setAttribute("position",
+                    `${seleccionado.position.x} ${seleccionado.position.y} ${z}`
+                );
+
+                // actualizar UI
+                posZ.value = z.toFixed(2);
+
+                return; // 👈 evita zoom normal
+            }
+
+            // ===== ZOOM NORMAL =====
             if (e.deltaY < 0) {
                 zoom *= 1.1;
             } else {
