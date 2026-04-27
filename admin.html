@@ -302,19 +302,26 @@
 
         // ===== APLICAR =====
         function aplicar() {
+
             if (!seleccionado) return;
 
             const x = parseFloat(posX.value);
             const y = parseFloat(posY.value);
             const z = parseFloat(posZ.value);
-            const s = parseFloat(scale.value);
+
+            const sx = parseFloat(scaleX.value);
+            const sy = parseFloat(scaleY.value);
+            const sz = parseFloat(scaleZ.value);
 
             seleccionado.position = { x, y, z };
-            seleccionado.scale = { x: s, y: s, z: s };
+            seleccionado.scale = { x: sx, y: sy, z: sz };
 
             const obj = document.getElementById(seleccionado.id);
+
             obj.setAttribute("position", `${x} ${y} ${z}`);
-            obj.setAttribute("scale", `${s} ${s} ${s}`);
+            obj.setAttribute("scale", `${sx} ${sy} ${sz}`);
+
+            console.log("✏️ Objeto actualizado");
         }
 
         // ===== EXPORTAR =====
