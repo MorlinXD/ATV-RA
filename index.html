@@ -2,131 +2,168 @@
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AR Murales</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AR Murales</title>
 
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://unpkg.com/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+<script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+<script src="https://unpkg.com/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
-    <style>
-        body {
-            margin: 0;
-        }
+<style>
+body { margin:0; }
 
-        #msg {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.6);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-family: sans-serif;
-        }
-    </style>
+#msg {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.6);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-family: sans-serif;
+}
+
+#debug {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.7);
+  color: #00ffcc;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-family: monospace;
+  font-size: 14px;
+  z-index: 999;
+}
+</style>
 </head>
 
 <body>
 
-    <div id="msg">📷 Apunta al mural</div>
+<div id="msg">📷 Apunta al mural</div>
+<div id="debug">Estado: iniciando...</div>
 
-    <a-scene mindar-image="imageTargetSrc: ./assets/prueba_porto.mind; autoStart: true;" vr-mode-ui="enabled: false"
-        device-orientation-permission-ui="enabled: false">
+<a-scene
+  mindar-image="
+    imageTargetSrc: ./assets/prueba_porto.mind;
+    autoStart: true;
+    filterMinCF: 0.0001;
+    filterBeta: 0.001;
+  "
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false"
+>
 
-        <a-assets id="assets"></a-assets>
+<a-assets id="assets"></a-assets>
 
-        <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+<a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-        <a-entity mindar-image-target="targetIndex: 0" id="root">
-        </a-entity>
+<!-- 👇 oculto hasta detectar -->
+<a-entity mindar-image-target="targetIndex: 0" id="root" visible="false">
+</a-entity>
 
-    </a-scene>
+</a-scene>
 
-    <script>
+<script>
 
-        async function cargarEscena() {
+// ===== DEBUG TRACKING =====
+const target = document.querySelector('[mindar-image-target]');
+const debug = document.getElementById("debug");
 
-            try {
+target.addEventListener("targetFound", () => {
+  console.log("TARGET DETECTADO");
+  debug.innerText = "✅ Detectado";
+  target.setAttribute("visible", true);
+});
 
-                const res = await fetch("escena.json");
-                const data = await res.json();
+target.addEventListener("targetLost", () => {
+  console.log("TARGET PERDIDO");
+  debug.innerText = "❌ Perdido";
+  target.setAttribute("visible", false);
+});
 
-                const root = document.getElementById("root");
-                const assets = document.getElementById("assets");
+// ===== CARGAR ESCENA =====
+async function cargarEscena() {
 
-                // limpiar escena previa
-                root.innerHTML = "";
+  try {
 
-                for (const el of data.elementos) {
+    const res = await fetch("escena.json");
+    const data = await res.json();
 
-                    const assetId = "asset_" + el.asset.replace(/\W/g, "_");
+    const root = document.getElementById("root");
+    const assets = document.getElementById("assets");
 
-                    // ===== REGISTRAR ASSET =====
-                    if (!document.getElementById(assetId)) {
+    root.innerHTML = "";
 
-                        let assetEl;
+    for (const el of data.elementos) {
 
-                        if (el.asset.match(/\.(mp4|webm)$/)) {
+      const assetId = "asset_" + el.asset.replace(/\W/g, "_");
 
-                            assetEl = document.createElement("video");
-                            assetEl.setAttribute("src", "./assets/" + el.asset);
-                            assetEl.setAttribute("id", assetId);
-                            assetEl.setAttribute("loop", true);
-                            assetEl.setAttribute("muted", true);
-                            assetEl.setAttribute("playsinline", true);
-                            assetEl.setAttribute("webkit-playsinline", true);
+      // ===== ASSET =====
+      if (!document.getElementById(assetId)) {
 
-                            // 🔥 clave para móviles
-                            assetEl.addEventListener("loadeddata", () => {
-                                assetEl.play().catch(() => { });
-                            });
+        let assetEl;
 
-                        } else {
+        if (el.asset.match(/\.(mp4|webm)$/)) {
 
-                            assetEl = document.createElement("img");
-                            assetEl.setAttribute("src", "./assets/" + el.asset);
-                            assetEl.setAttribute("id", assetId);
+          assetEl = document.createElement("video");
+          assetEl.setAttribute("src", "./assets/" + el.asset);
+          assetEl.setAttribute("id", assetId);
+          assetEl.setAttribute("loop", true);
+          assetEl.setAttribute("muted", true);
+          assetEl.setAttribute("playsinline", true);
+          assetEl.setAttribute("webkit-playsinline", true);
 
-                        }
+          assetEl.addEventListener("loadeddata", () => {
+            assetEl.play().catch(() => {});
+          });
 
-                        assets.appendChild(assetEl);
-                    }
+        } else {
 
-                    // ===== CREAR OBJETO =====
-                    let obj;
+          assetEl = document.createElement("img");
+          assetEl.setAttribute("src", "./assets/" + el.asset);
+          assetEl.setAttribute("id", assetId);
 
-                    if (el.asset.match(/\.(mp4|webm)$/)) {
-                        obj = document.createElement("a-video");
-                        obj.setAttribute("src", "#" + assetId);
-                        obj.setAttribute("width", "1");
-                    } else {
-                        obj = document.createElement("a-image");
-                        obj.setAttribute("src", "#" + assetId);
-                        obj.setAttribute("width", "1");
-                    }
-
-                    obj.setAttribute("position",
-                        `${el.position.x} ${el.position.y} ${el.position.z}`
-                    );
-
-                    obj.setAttribute("scale",
-                        `${el.scale.x} ${el.scale.y} ${el.scale.z}`
-                    );
-
-                    root.appendChild(obj);
-                }
-
-            } catch (err) {
-                console.error("Error cargando escena:", err);
-            }
         }
 
-        cargarEscena();
+        assets.appendChild(assetEl);
+      }
 
-    </script>
+      // ===== OBJETO =====
+      let obj;
+
+      if (el.asset.match(/\.(mp4|webm)$/)) {
+        obj = document.createElement("a-video");
+        obj.setAttribute("src", "#" + assetId);
+        obj.setAttribute("width", "1");
+      } else {
+        obj = document.createElement("a-image");
+        obj.setAttribute("src", "#" + assetId);
+        obj.setAttribute("width", "1");
+      }
+
+      obj.setAttribute("position",
+        `${el.position.x} ${el.position.y} ${el.position.z}`
+      );
+
+      obj.setAttribute("scale",
+        `${el.scale.x} ${el.scale.y} ${el.scale.z}`
+      );
+
+      root.appendChild(obj);
+    }
+
+  } catch (err) {
+    console.error("Error cargando escena:", err);
+    debug.innerText = "❌ Error cargando escena";
+  }
+}
+
+cargarEscena();
+
+</script>
 
 </body>
-
 </html>
