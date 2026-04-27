@@ -1,77 +1,123 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Editor AR Pro</title>
+<meta charset="UTF-8">
+<title>Editor AR Pro</title>
 
-  <style>
-    body { margin:0; display:flex; font-family:sans-serif; }
-    #controls {
-      width:300px; background:#222; color:white; padding:10px;
-    }
-    #preview { flex:1; }
-    input { width:60px; margin:2px; }
-    button { margin-top:5px; }
-    .item { cursor:pointer; padding:5px; border-bottom:1px solid #444; }
-    .item:hover { background:#444; }
-  </style>
+<script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+<style>
+body {
+  margin:0;
+  display:grid;
+  grid-template-columns: 250px 1fr 250px;
+  height:100vh;
+  font-family:sans-serif;
+  background:#111;
+  color:white;
+}
+
+/* SIDEBAR */
+#left, #right {
+  background:#1a1a1a;
+  padding:10px;
+  overflow:auto;
+}
+
+/* CANVAS */
+#center {
+  position:relative;
+  background:#000;
+}
+
+/* LISTA */
+.item {
+  padding:8px;
+  border-bottom:1px solid #333;
+  cursor:pointer;
+}
+.item:hover {
+  background:#333;
+}
+.active {
+  background:#555;
+}
+
+/* INPUTS */
+input {
+  width:70px;
+  margin:3px;
+}
+
+/* BOTONES */
+button {
+  margin-top:5px;
+  padding:6px;
+  width:100%;
+  background:#333;
+  color:white;
+  border:none;
+  cursor:pointer;
+}
+button:hover {
+  background:#555;
+}
+</style>
 </head>
 
 <body>
 
-<div id="controls">
+<!-- IZQUIERDA -->
+<div id="left">
+  <h3>📁 Assets</h3>
 
-  <h3>Imagen base</h3>
-  <input type="file" id="imgInput"><br>
+  Imagen base:
+  <input type="file" id="imgBase"><br><br>
 
-  <hr>
+  Subir asset:
+  <input type="file" id="assetInput"><br>
 
-  <h3>Elementos</h3>
+  <button onclick="crearElemento()">➕ Crear elemento</button>
+
+  <h3>📦 Elementos</h3>
   <div id="lista"></div>
-
-  <button onclick="agregar()">➕ Agregar</button>
-
-  <hr>
-
-  <h3>Transformación</h3>
-
-  X: <input id="posX" type="number" step="0.1"><br>
-  Y: <input id="posY" type="number" step="0.1"><br>
-  Z: <input id="posZ" type="number" step="0.01"><br>
-
-  Escala:
-  <input id="scale" type="number" step="0.1" value="1"><br>
-
-  <button onclick="aplicar()">Aplicar</button>
-
-  <hr>
-
-  <button onclick="guardar()">💾 Guardar JSON</button>
-
 </div>
 
-<div id="preview">
+<!-- CENTRO -->
+<div id="center">
+
   <a-scene embedded>
-    <a-assets>
-      <img id="baseImg">
-    </a-assets>
+    <a-assets id="assets"></a-assets>
 
     <a-camera position="0 0 3"></a-camera>
 
-    <!-- MURAL BASE -->
+    <!-- MURAL -->
     <a-plane id="mural"
-      src="#baseImg"
       width="2"
       height="1.2"
       position="0 0 0">
     </a-plane>
 
-    <!-- ELEMENTOS -->
-    <a-entity id="sceneRoot"></a-entity>
+    <!-- CONTENIDO -->
+    <a-entity id="root"></a-entity>
 
   </a-scene>
+
+</div>
+
+<!-- DERECHA -->
+<div id="right">
+  <h3>⚙️ Propiedades</h3>
+
+  X <input id="posX" type="number" step="0.1"><br>
+  Y <input id="posY" type="number" step="0.1"><br>
+  Z <input id="posZ" type="number" step="0.01"><br>
+
+  Escala <input id="scale" type="number" step="0.1"><br>
+
+  <button onclick="aplicar()">Aplicar</button>
+
+  <button onclick="guardar()">💾 Exportar JSON</button>
 </div>
 
 <script>
@@ -79,78 +125,134 @@
 let elementos = [];
 let seleccionado = null;
 let contador = 0;
+let ultimoAsset = null;
 
-// 📸 Cargar imagen base
-document.getElementById("imgInput").addEventListener("change", (e) => {
+// 📸 IMAGEN BASE
+document.getElementById("imgBase").addEventListener("change", e => {
   const file = e.target.files[0];
   const url = URL.createObjectURL(file);
 
-  document.querySelector("#baseImg").setAttribute("src", url);
+  const id = "baseImg";
+
+  let img = document.getElementById(id);
+  if(!img){
+    img = document.createElement("img");
+    img.setAttribute("id", id);
+    document.getElementById("assets").appendChild(img);
+  }
+
+  img.setAttribute("src", url);
+
+  document.getElementById("mural").setAttribute("src", "#" + id);
 });
 
-// ➕ Agregar elemento
-function agregar() {
+// 📦 SUBIR ASSET
+document.getElementById("assetInput").addEventListener("change", e => {
+  const file = e.target.files[0];
+  const url = URL.createObjectURL(file);
+
+  const id = "asset" + Date.now();
+
+  let el;
+
+  if(file.type.includes("video")){
+    el = document.createElement("video");
+    el.setAttribute("src", url);
+    el.setAttribute("id", id);
+    el.setAttribute("loop", true);
+    el.setAttribute("autoplay", true);
+    el.setAttribute("muted", true);
+    el.setAttribute("playsinline", true);
+  } else {
+    el = document.createElement("img");
+    el.setAttribute("src", url);
+    el.setAttribute("id", id);
+  }
+
+  document.getElementById("assets").appendChild(el);
+
+  ultimoAsset = id;
+});
+
+// ➕ CREAR ELEMENTO
+function crearElemento(){
+
+  if(!ultimoAsset){
+    alert("Sube un asset primero");
+    return;
+  }
 
   const id = "obj" + contador++;
 
-  const obj = document.createElement("a-plane");
-  obj.setAttribute("color", "red");
-  obj.setAttribute("width", "0.5");
-  obj.setAttribute("height", "0.5");
+  let obj;
+
+  if(document.getElementById(ultimoAsset).tagName === "VIDEO"){
+    obj = document.createElement("a-video");
+  } else {
+    obj = document.createElement("a-image");
+  }
+
+  obj.setAttribute("src", "#" + ultimoAsset);
   obj.setAttribute("position", "0 0 0.01");
+  obj.setAttribute("width", "1");
 
   obj.setAttribute("id", id);
 
-  document.querySelector("#sceneRoot").appendChild(obj);
+  document.getElementById("root").appendChild(obj);
 
   elementos.push({
     id,
-    type: "plane",
-    src: "",
-    position: { x:0, y:0, z:0.01 },
-    scale: { x:1, y:1, z:1 }
+    asset: ultimoAsset,
+    position:{x:0,y:0,z:0.01},
+    scale:{x:1,y:1,z:1}
   });
 
   renderLista();
 }
 
-// 📋 Lista
-function renderLista() {
+// 📋 LISTA
+function renderLista(){
   const lista = document.getElementById("lista");
-  lista.innerHTML = "";
+  lista.innerHTML="";
 
-  elementos.forEach(el => {
+  elementos.forEach(el=>{
     const div = document.createElement("div");
     div.className = "item";
     div.innerText = el.id;
 
-    div.onclick = () => seleccionar(el.id);
+    if(seleccionado && seleccionado.id === el.id){
+      div.classList.add("active");
+    }
+
+    div.onclick = ()=> seleccionar(el.id);
 
     lista.appendChild(div);
   });
 }
 
-// 🎯 Seleccionar
-function seleccionar(id) {
-  seleccionado = elementos.find(e => e.id === id);
+// 🎯 SELECCIONAR
+function seleccionar(id){
+  seleccionado = elementos.find(e=>e.id===id);
 
   posX.value = seleccionado.position.x;
   posY.value = seleccionado.position.y;
   posZ.value = seleccionado.position.z;
   scale.value = seleccionado.scale.x;
+
+  renderLista();
 }
 
-// ⚙️ Aplicar
-function aplicar() {
-  if (!seleccionado) return;
+// ⚙️ APLICAR
+function aplicar(){
+  if(!seleccionado) return;
 
   const x = parseFloat(posX.value);
   const y = parseFloat(posY.value);
   const z = parseFloat(posZ.value);
   const s = parseFloat(scale.value);
 
-  seleccionado.position = { x, y, z };
-  seleccionado.scale = { x:s, y:s, z:s };
+  seleccionado.position = {x,y,z};
+  seleccionado.scale = {x:s,y:s,z:s};
 
   const obj = document.getElementById(seleccionado.id);
 
@@ -158,11 +260,10 @@ function aplicar() {
   obj.setAttribute("scale", `${s} ${s} ${s}`);
 }
 
-// 💾 Guardar JSON
-function guardar() {
-  const data = JSON.stringify(elementos, null, 2);
-  console.log(data);
-  alert("JSON listo en consola");
+// 💾 EXPORTAR
+function guardar(){
+  console.log(JSON.stringify(elementos,null,2));
+  alert("JSON en consola");
 }
 
 </script>
