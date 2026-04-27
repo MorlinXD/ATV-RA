@@ -1,3 +1,16 @@
 [
-  { "name": "video.mp4", "type": "video" }
+  { "name": "video.mp4", "type": "video" },
+  { "name": "Recurso 21.png", "type": "image" },
+  { "name": "Recurso 22.png", "type": "image" },
+  { "name": "Recurso 23.png", "type": "image" },
+  { "name": "Recurso 24.png", "type": "image" },
+  { "name": "Recurso 25.png", "type": "image" },
+  { "name": "Recurso 26.png", "type": "image" },
+  { "name": "Recurso 28.png", "type": "image" },
+  { "name": "Recurso 32.png", "type": "image" },
+  { "name": "cacao.mp4", "type": "video" },
+  { "name": "canoa.mp4", "type": "video" },
+  { "name": "manos.mp4", "type": "video" },
+  { "name": "nino.mp4", "type": "video"},
+  { "name": "pajaro.mp4", "type": "video"}
 ]
