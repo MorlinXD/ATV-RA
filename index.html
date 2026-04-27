@@ -10,19 +10,7 @@
 <script src="https://unpkg.com/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
 <style>
-body { margin:0; }
-
-#msg {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0,0,0,0.6);
-  color: white;
-  padding: 10px 20px;
-  border-radius: 20px;
-  font-family: sans-serif;
-}
+body { margin:0; overflow:hidden; }
 
 #debug {
   position: fixed;
@@ -34,7 +22,19 @@ body { margin:0; }
   padding: 8px 16px;
   border-radius: 10px;
   font-family: monospace;
-  font-size: 14px;
+  z-index: 999;
+}
+
+#msg {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.6);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-family: sans-serif;
   z-index: 999;
 }
 </style>
@@ -49,10 +49,9 @@ body { margin:0; }
   mindar-image="
     imageTargetSrc: ./assets/prueba_porto.mind;
     autoStart: true;
-    filterMinCF: 0.0001;
-    filterBeta: 0.001;
+    uiLoading: yes;
+    uiScanning: yes;
   "
-  renderer="colorManagement: true; physicallyCorrectLights: false; precision: mediump;"
   vr-mode-ui="enabled: false"
   device-orientation-permission-ui="enabled: false"
 >
@@ -61,111 +60,103 @@ body { margin:0; }
 
 <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-<a-entity mindar-image-target="targetIndex: 0" id="root" visible="false"></a-entity>
+<!-- IMPORTANTE: NO ocultar el target -->
+<a-entity mindar-image-target="targetIndex: 0" id="target">
+
+  <!-- SOLO ESTE SE OCULTA -->
+  <a-entity id="root"></a-entity>
+
+</a-entity>
 
 </a-scene>
 
 <script>
 
-// ===== DEBUG =====
-const target = document.querySelector('[mindar-image-target]');
 const debug = document.getElementById("debug");
+const target = document.getElementById("target");
+const root = document.getElementById("root");
 
-// ===== TRACKING =====
 target.addEventListener("targetFound", () => {
   debug.innerText = "✅ Detectado";
-  target.setAttribute("visible", true);
+
+  // SOLO mostrar contenido
+  root.setAttribute("visible", true);
 
   document.querySelectorAll("video").forEach(v => {
-    v.currentTime = 0;
     v.play().catch(()=>{});
   });
+
 });
 
 target.addEventListener("targetLost", () => {
   debug.innerText = "❌ Perdido";
-  target.setAttribute("visible", false);
 
-  document.querySelectorAll("video").forEach(v => v.pause());
+  // 🔥 SOLO ocultar contenido, NO el target
+  root.setAttribute("visible", false);
+
+  document.querySelectorAll("video").forEach(v => {
+    v.pause();
+  });
+
 });
 
-
-// ===== ESCENA =====
 async function cargarEscena() {
 
-  try {
+  const res = await fetch("escena.json");
+  const data = await res.json();
 
-    const res = await fetch("escena.json");
-    const data = await res.json();
+  const assets = document.getElementById("assets");
 
-    const root = document.getElementById("root");
-    const assets = document.getElementById("assets");
+  for (const el of data.elementos) {
 
-    root.innerHTML = "";
+    const id = "asset_" + el.asset.replace(/\W/g, "_");
 
-    for (const el of data.elementos) {
+    if (!document.getElementById(id)) {
 
-      const assetId = "asset_" + el.asset.replace(/\W/g, "_");
+      let a;
 
-      // ===== ASSETS =====
-      if (!document.getElementById(assetId)) {
+      if (el.asset.match(/\.(mp4|webm)$/)) {
 
-        let assetEl;
+        a = document.createElement("video");
+        a.src = "assets/" + el.asset;
+        a.id = id;
+        a.loop = true;
+        a.muted = true;
+        a.playsInline = true;
+        a.autoplay = true;
 
-        if (el.asset.match(/\.(mp4|webm)$/)) {
+      } else {
 
-          assetEl = document.createElement("video");
-          assetEl.src = "assets/" + el.asset;
-          assetEl.id = assetId;
+        a = document.createElement("img");
+        a.src = "assets/" + el.asset;
+        a.id = id;
 
-          assetEl.muted = true;
-          assetEl.autoplay = false; // 🔥 IMPORTANTE
-          assetEl.loop = true;
-          assetEl.setAttribute("playsinline", "");
-          assetEl.setAttribute("webkit-playsinline", "");
-          assetEl.crossOrigin = "anonymous";
-          assetEl.preload = "auto";
-
-        } else {
-
-          assetEl = document.createElement("img");
-          assetEl.src = "assets/" + el.asset;
-          assetEl.id = assetId;
-        }
-
-        assets.appendChild(assetEl);
       }
 
-      // ===== OBJETO (ESTABLE PARA AR) =====
-      let obj = document.createElement("a-plane");
-
-      obj.setAttribute("width", "1");
-      obj.setAttribute("height", "0.6");
-
-      obj.setAttribute("material", {
-        shader: "flat",
-        src: "#" + assetId,
-        side: "double",
-        transparent: true
-      });
-
-      obj.setAttribute("position",
-        `${el.position.x} ${el.position.y} ${el.position.z}`
-      );
-
-      obj.setAttribute("scale",
-        `${el.scale.x} ${el.scale.y} ${el.scale.z}`
-      );
-
-      // 🔥 evita problemas de render en AR
-      obj.setAttribute("look-at", "[camera]");
-
-      root.appendChild(obj);
+      assets.appendChild(a);
     }
 
-  } catch (err) {
-    console.error(err);
-    debug.innerText = "❌ Error cargando escena";
+    const obj = document.createElement("a-plane");
+
+    obj.setAttribute("width", "1");
+    obj.setAttribute("height", "0.6");
+
+    obj.setAttribute("material", `
+      shader: flat;
+      src: #${id};
+      transparent: true;
+      side: double;
+    `);
+
+    obj.setAttribute("position",
+      `${el.position.x} ${el.position.y} ${el.position.z}`
+    );
+
+    obj.setAttribute("scale",
+      `${el.scale.x} ${el.scale.y} ${el.scale.z}`
+    );
+
+    root.appendChild(obj);
   }
 }
 
