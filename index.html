@@ -156,8 +156,13 @@ async function cargarEscena() {
       `);
 
       // posición visible
-      obj.setAttribute("position", "0 0 0.3");
-      obj.setAttribute("scale", "2 2 2");
+     obj.setAttribute("position",
+  `${el.position.x} ${el.position.y} ${el.position.z}`
+);
+
+obj.setAttribute("scale",
+  `${el.scale.x} ${el.scale.y} ${el.scale.z}`
+);
 
       root.appendChild(obj);
     }
