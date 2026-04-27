@@ -18,8 +18,7 @@
             color: white;
         }
 
-        #left,
-        #right {
+        #left, #right {
             background: #1a1a1a;
             padding: 12px;
             overflow: auto;
@@ -116,6 +115,10 @@
     Escala Y <input id="scaleY" type="number" step="0.1"><br>
     Escala Z <input id="scaleZ" type="number" step="0.1"><br>
 
+    <hr>
+
+    Rotación Z <input id="rotZ" type="number" step="1"><br>
+
     <button onclick="aplicar()">Aplicar cambios</button>
     <button onclick="eliminar()">🗑 Eliminar objeto</button>
     <button onclick="guardar()">💾 Exportar JSON</button>
@@ -129,7 +132,7 @@ let seleccionado = null;
 let contador = 0;
 let assetSeleccionado = null;
 
-// ===== GALERÍA =====
+// ================= GALERÍA =================
 async function cargarGaleria() {
     const res = await fetch("assets.json");
     const assets = await res.json();
@@ -144,8 +147,10 @@ async function cargarGaleria() {
 
         div.onclick = () => {
             assetSeleccionado = a;
+
             document.querySelectorAll("#galeria .item")
                 .forEach(el => el.classList.remove("active"));
+
             div.classList.add("active");
         };
 
@@ -155,7 +160,7 @@ async function cargarGaleria() {
 
 cargarGaleria();
 
-// ===== CREAR =====
+// ================= CREAR =================
 function crearElemento() {
 
     if (!assetSeleccionado) {
@@ -188,6 +193,7 @@ function crearElemento() {
     obj.setAttribute("src", "#" + assetId);
     obj.setAttribute("position", "0 0 0.01");
     obj.setAttribute("scale", "1 1 1");
+    obj.setAttribute("rotation", "0 0 0");
     obj.classList.add("draggable");
     obj.id = id;
 
@@ -197,13 +203,14 @@ function crearElemento() {
         id,
         asset: assetSeleccionado.name,
         position: { x: 0, y: 0, z: 0.01 },
-        scale: { x: 1, y: 1, z: 1 }
+        scale: { x: 1, y: 1, z: 1 },
+        rotation: { z: 0 }
     });
 
     renderLista();
 }
 
-// ===== LISTA =====
+// ================= LISTA =================
 function renderLista() {
     const lista = document.getElementById("lista");
     lista.innerHTML = "";
@@ -223,7 +230,7 @@ function renderLista() {
     });
 }
 
-// ===== SELECCIÓN =====
+// ================= SELECCIÓN =================
 function seleccionar(id) {
 
     seleccionado = elementos.find(e => e.id === id);
@@ -238,10 +245,12 @@ function seleccionar(id) {
     scaleY.value = seleccionado.scale.y;
     scaleZ.value = seleccionado.scale.z;
 
+    rotZ.value = seleccionado.rotation?.z || 0;
+
     renderLista();
 }
 
-// ===== APLICAR =====
+// ================= APLICAR =================
 function aplicar() {
 
     if (!seleccionado) return;
@@ -254,16 +263,20 @@ function aplicar() {
     const sy = parseFloat(scaleY.value);
     const sz = parseFloat(scaleZ.value);
 
+    const rz = parseFloat(rotZ.value || 0);
+
     seleccionado.position = { x, y, z };
     seleccionado.scale = { x: sx, y: sy, z: sz };
+    seleccionado.rotation = { z: rz };
 
     const obj = document.getElementById(seleccionado.id);
 
     obj.setAttribute("position", `${x} ${y} ${z}`);
     obj.setAttribute("scale", `${sx} ${sy} ${sz}`);
+    obj.setAttribute("rotation", `0 0 ${rz}`);
 }
 
-// ===== ELIMINAR =====
+// ================= ELIMINAR =================
 function eliminar() {
 
     if (!seleccionado) return;
@@ -280,11 +293,12 @@ function eliminar() {
     scaleX.value = "";
     scaleY.value = "";
     scaleZ.value = "";
+    rotZ.value = "";
 
     renderLista();
 }
 
-// ===== EXPORTAR =====
+// ================= EXPORTAR =================
 function guardar() {
 
     const blob = new Blob([JSON.stringify({ elementos }, null, 2)], {
@@ -297,7 +311,7 @@ function guardar() {
     a.click();
 }
 
-// ===== DRAG SIMPLE =====
+// ================= SELECCIÓN SIMPLE =================
 document.addEventListener("mousedown", (e) => {
     if (e.target.classList.contains("draggable")) {
         seleccionar(e.target.id);
