@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Editor AR</title>
+  <style>
+    body { font-family: sans-serif; display: flex; }
+    #controls { width: 300px; padding: 10px; background: #222; color: white; }
+    #preview { flex: 1; }
+    input { width: 60px; margin: 2px; }
+  </style>
+
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+</head>
+
+<body>
+
+<div id="controls">
+  <h3>Elemento</h3>
+
+  X: <input id="posX" type="number" step="0.1"><br>
+  Y: <input id="posY" type="number" step="0.1"><br>
+  Z: <input id="posZ" type="number" step="0.01"><br><br>
+
+  Escala:
+  <input id="scale" type="number" step="0.1" value="1"><br><br>
+
+  <button onclick="aplicar()">Aplicar</button>
+</div>
+
+<div id="preview">
+  <a-scene embedded>
+    <a-camera position="0 0 3"></a-camera>
+
+    <a-plane id="obj"
+      color="red"
+      width="1"
+      height="1"
+      position="0 0 0">
+    </a-plane>
+
+  </a-scene>
+</div>
+
+<script>
+function aplicar() {
+  const obj = document.querySelector("#obj");
+
+  const x = document.getElementById("posX").value || 0;
+  const y = document.getElementById("posY").value || 0;
+  const z = document.getElementById("posZ").value || 0;
+  const s = document.getElementById("scale").value || 1;
+
+  obj.setAttribute("position", `${x} ${y} ${z}`);
+  obj.setAttribute("scale", `${s} ${s} ${s}`);
+}
+</script>
+
+</body>
+</html>
