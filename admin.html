@@ -2,399 +2,410 @@
 <html lang="es">
 
 <head>
-<meta charset="UTF-8">
-<title>Editor AR Pro</title>
+    <meta charset="UTF-8">
+    <title>Editor AR Pro</title>
 
-<script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
-<style>
-body {
-  margin:0;
-  display:grid;
-  grid-template-columns: 260px 1fr 260px;
-  height:100vh;
-  font-family:sans-serif;
-  background:#111;
-  color:white;
-}
+    <style>
+        body {
+            margin: 0;
+            display: grid;
+            grid-template-columns: 260px 1fr 260px;
+            height: 100vh;
+            font-family: sans-serif;
+            background: #111;
+            color: white;
+        }
 
-#left, #right {
-  background:#1a1a1a;
-  padding:12px;
-  overflow:auto;
-}
+        #left,
+        #right {
+            background: #1a1a1a;
+            padding: 12px;
+            overflow: auto;
+        }
 
-#center {
-  background:#000;
-}
+        #center {
+            background: #000;
+        }
 
-.item {
-  padding:8px;
-  border-bottom:1px solid #333;
-  cursor:pointer;
-}
-.item:hover { background:#333; }
-.active { background:#555; }
+        .item {
+            padding: 8px;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+        }
 
-input {
-  width:70px;
-  margin:4px;
-}
+        .item:hover {
+            background: #333;
+        }
 
-button {
-  margin-top:6px;
-  padding:8px;
-  width:100%;
-  background:#333;
-  color:white;
-  border:none;
-  cursor:pointer;
-}
-button:hover { background:#555; }
-</style>
+        .active {
+            background: #555;
+        }
+
+        input {
+            width: 70px;
+            margin: 4px;
+        }
+
+        button {
+            margin-top: 6px;
+            padding: 8px;
+            width: 100%;
+            background: #333;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #555;
+        }
+    </style>
 </head>
 
 <body>
 
-<!-- IZQUIERDA -->
-<div id="left">
+    <!-- IZQUIERDA -->
+    <div id="left">
 
-<h3>🖼 Imagen base</h3>
-<input type="file" id="imgBase">
+        <h3>🖼 Imagen base</h3>
+        <input type="file" id="imgBase">
 
-<h3>🎞 Galería</h3>
-<div id="galeria"></div>
+        <h3>🎞 Galería</h3>
+        <div id="galeria"></div>
 
-<button onclick="crearElemento()">➕ Crear elemento</button>
+        <button onclick="crearElemento()">➕ Crear elemento</button>
 
-<h3>📦 Elementos</h3>
-<div id="lista"></div>
+        <h3>📦 Elementos</h3>
+        <div id="lista"></div>
 
-</div>
+    </div>
 
-<!-- CENTRO -->
-<div id="center">
+    <!-- CENTRO -->
+    <div id="center">
 
-<a-scene 
-  embedded
-  cursor="rayOrigin: mouse"
-  raycaster="objects: .draggable"
-  style="touch-action: none;">
+        <a-scene embedded cursor="rayOrigin: mouse" raycaster="objects: .draggable" style="touch-action: none;">
 
-  <a-assets id="assets"></a-assets>
+            <a-assets id="assets"></a-assets>
 
-  <a-camera position="0 0 3"></a-camera>
+            <a-camera position="0 0 3"></a-camera>
 
-  <a-plane id="mural"
-    width="2"
-    height="1.2"
-    position="0 0 0">
-  </a-plane>
+            <a-plane id="mural" width="2" height="1.2" position="0 0 0">
+            </a-plane>
 
-  <a-entity id="root"></a-entity>
+            <a-entity id="root"></a-entity>
 
-</a-scene>
+        </a-scene>
 
-</div>
+    </div>
 
-<!-- DERECHA -->
-<div id="right">
+    <!-- DERECHA -->
+    <div id="right">
 
-<h3>⚙️ Propiedades</h3>
+        <h3>⚙️ Propiedades</h3>
 
-X <input id="posX" type="number" step="0.1"><br>
-Y <input id="posY" type="number" step="0.1"><br>
-Z <input id="posZ" type="number" step="0.01"><br>
+        X <input id="posX" type="number" step="0.1"><br>
+        Y <input id="posY" type="number" step="0.1"><br>
+        Z <input id="posZ" type="number" step="0.01"><br>
 
-Escala <input id="scale" type="number" step="0.1"><br>
+        Escala <input id="scale" type="number" step="0.1"><br>
 
-<button onclick="aplicar()">Aplicar</button>
-<button onclick="guardar()">💾 Exportar JSON</button>
+        <button onclick="aplicar()">Aplicar</button>
+        <button onclick="guardar()">💾 Exportar JSON</button>
 
-</div>
+    </div>
 
-<script>
+    <script>
 
-// ===== ESTADO =====
-let elementos = [];
-let seleccionado = null;
-let contador = 0;
-let assetSeleccionado = null;
+        // ===== ESTADO =====
+        let elementos = [];
+        let seleccionado = null;
+        let contador = 0;
+        let assetSeleccionado = null;
 
-// ===== IMAGEN BASE =====
-document.getElementById("imgBase").addEventListener("change", e => {
-  const file = e.target.files[0];
-  const url = URL.createObjectURL(file);
+        // ===== IMAGEN BASE =====
+        document.getElementById("imgBase").addEventListener("change", e => {
+            const file = e.target.files[0];
+            const url = URL.createObjectURL(file);
 
-  let img = document.getElementById("baseImg");
+            let img = document.getElementById("baseImg");
 
-  if(!img){
-    img = document.createElement("img");
-    img.setAttribute("id","baseImg");
-    document.getElementById("assets").appendChild(img);
-  }
+            if (!img) {
+                img = document.createElement("img");
+                img.setAttribute("id", "baseImg");
+                document.getElementById("assets").appendChild(img);
+            }
 
-  img.onload = () => {
+            img.onload = () => {
 
-    const w = img.naturalWidth;
-    const h = img.naturalHeight;
+                const w = img.naturalWidth;
+                const h = img.naturalHeight;
 
-    const ratio = w / h;
+                const maxSize = 2; // tamaño máximo del lado más grande
 
-    const baseWidth = 3; // puedes cambiar esto
-    const baseHeight = baseWidth / ratio;
+                let width, height;
 
-    const mural = document.getElementById("mural");
+                if (w >= h) {
+                    width = maxSize;
+                    height = (h / w) * maxSize;
+                } else {
+                    height = maxSize;
+                    width = (w / h) * maxSize;
+                }
 
-    mural.setAttribute("src","#baseImg");
-    mural.setAttribute("width", baseWidth);
-    mural.setAttribute("height", baseHeight);
+                const mural = document.getElementById("mural");
 
-  };
+                mural.setAttribute("src", "#baseImg");
+                mural.setAttribute("width", width);
+                mural.setAttribute("height", height);
 
-  img.setAttribute("src", url);
-});
+            };
 
-// ===== GALERÍA =====
-async function cargarGaleria(){
-  const res = await fetch("assets.json");
-  const assets = await res.json();
-
-  const cont = document.getElementById("galeria");
-  cont.innerHTML = "";
-
-  assets.forEach(a => {
-    const div = document.createElement("div");
-    div.className = "item";
-    div.innerText = a.name;
-
-    div.onclick = () => {
-      assetSeleccionado = a;
-
-      document.querySelectorAll("#galeria .item")
-        .forEach(el => el.classList.remove("active"));
-
-      div.classList.add("active");
-    };
-
-    cont.appendChild(div);
-  });
-}
-
-cargarGaleria();
-
-// ===== CREAR ELEMENTO =====
-function crearElemento(){
-
-  if(!assetSeleccionado){
-    alert("Selecciona un asset de la galería");
-    return;
-  }
-
-  const id = "obj" + contador++;
-  const assetId = "asset_" + assetSeleccionado.name.replace(/\W/g, "_");
-
-  if(!document.getElementById(assetId)){
-    let el;
-
-    if(assetSeleccionado.type === "video"){
-      el = document.createElement("video");
-      el.src = "./assets/" + assetSeleccionado.name;
-      el.id = assetId;
-      el.loop = true;
-      el.muted = true;
-      el.autoplay = true;
-      el.playsInline = true;
-    } else {
-      el = document.createElement("img");
-      el.src = "./assets/" + assetSeleccionado.name;
-      el.id = assetId;
-    }
-
-    document.getElementById("assets").appendChild(el);
-  }
-
-  let obj;
-
-  if(assetSeleccionado.type === "video"){
-    obj = document.createElement("a-video");
-    obj.setAttribute("src", "#" + assetId);
-    obj.setAttribute("width", "1");
-  } else {
-    obj = document.createElement("a-image");
-    obj.setAttribute("src", "#" + assetId);
-    obj.setAttribute("width", "1");
-  }
-
-  obj.setAttribute("position","0 0 0.01");
-  obj.setAttribute("id", id);
-  obj.classList.add("draggable");
-
-  document.getElementById("root").appendChild(obj);
-
-  elementos.push({
-    id,
-    asset: assetSeleccionado.name,
-    position:{x:0,y:0,z:0.01},
-    scale:{x:1,y:1,z:1}
-  });
-
-  renderLista();
-}
-
-// ===== LISTA =====
-function renderLista(){
-  const lista = document.getElementById("lista");
-  lista.innerHTML="";
-
-  elementos.forEach(el => {
-    const div = document.createElement("div");
-    div.className = "item";
-    div.innerText = el.id;
-
-    if(seleccionado && seleccionado.id === el.id){
-      div.classList.add("active");
-    }
-
-    div.onclick = () => seleccionar(el.id);
-    lista.appendChild(div);
-  });
-}
-
-// ===== SELECCIONAR =====
-function seleccionar(id){
-  seleccionado = elementos.find(e=>e.id===id);
-
-  posX.value = seleccionado.position.x;
-  posY.value = seleccionado.position.y;
-  posZ.value = seleccionado.position.z;
-  scale.value = seleccionado.scale.x;
-
-  document.querySelectorAll("#root > *").forEach(el=>{
-    el.setAttribute("material","opacity",1);
-  });
-
-  const obj = document.getElementById(seleccionado.id);
-  obj.setAttribute("material","opacity",0.7);
-
-  renderLista();
-}
-
-// ===== APLICAR =====
-function aplicar(){
-  if(!seleccionado) return;
-
-  const x = parseFloat(posX.value);
-  const y = parseFloat(posY.value);
-  const z = parseFloat(posZ.value);
-  const s = parseFloat(scale.value);
-
-  seleccionado.position = {x,y,z};
-  seleccionado.scale = {x:s,y:s,z:s};
-
-  const obj = document.getElementById(seleccionado.id);
-  obj.setAttribute("position",`${x} ${y} ${z}`);
-  obj.setAttribute("scale",`${s} ${s} ${s}`);
-}
-
-// ===== EXPORTAR =====
-function guardar(){
-  console.log(JSON.stringify(elementos,null,2));
-  alert("JSON generado en consola");
-}
-
-// ===== DRAG =====
-let dragging = false;
-let current = null;
-let startX = 0;
-let startY = 0;
-
-const sceneEl = document.querySelector("a-scene");
-
-sceneEl.addEventListener("mousedown", (e) => {
-  if (e.target.classList.contains("draggable")) {
-    startX = e.clientX;
-    startY = e.clientY;
-    current = e.target;
-    seleccionar(current.id);
-  }
-});
-
-document.addEventListener("mousemove", (e) => {
-
-  if (!current) return;
-
-  if (!dragging) {
-    const dx = Math.abs(e.clientX - startX);
-    const dy = Math.abs(e.clientY - startY);
-
-    if (dx > 5 || dy > 5) {
-      dragging = true;
-    } else {
-      return;
-    }
-  }
-
-  const camera = sceneEl.camera || sceneEl.querySelector("a-camera").getObject3D("camera");
-
-  const mouse = new THREE.Vector2();
-  const rect = sceneEl.canvas.getBoundingClientRect();
-
-  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(mouse, camera);
-
-  const planeZ = current.object3D.position.z;
-
-  const plane = new THREE.Plane(
-    new THREE.Vector3(0, 0, 1),
-    -planeZ
-  );
-
-  const intersect = new THREE.Vector3();
-  raycaster.ray.intersectPlane(plane, intersect);
-
-  if (intersect) {
-    current.object3D.position.set(intersect.x, intersect.y, planeZ);
-
-    const el = elementos.find(e => e.id === current.id);
-    el.position.x = intersect.x;
-    el.position.y = intersect.y;
-
-    posX.value = intersect.x.toFixed(2);
-    posY.value = intersect.y.toFixed(2);
-  }
-});
-
-document.addEventListener("mouseup", () => {
-  dragging = false;
-  current = null;
-});
-
-// ===== ZOOM =====
-let zoom = 1;
-
-sceneEl.addEventListener("wheel", (e) => {
-  e.preventDefault();
-
-  if (e.deltaY < 0) {
-    zoom *= 1.1;
-  } else {
-    zoom *= 0.9;
-  }
-
-  zoom = Math.min(Math.max(zoom, 0.5), 5);
-
-  const root = document.getElementById("root");
-  const mural = document.getElementById("mural");
-
-  root.object3D.scale.set(zoom, zoom, zoom);
-  mural.object3D.scale.set(zoom, zoom, zoom);
-});
-
-</script>
+            img.setAttribute("src", url);
+        });
+
+        // ===== GALERÍA =====
+        async function cargarGaleria() {
+            const res = await fetch("assets.json");
+            const assets = await res.json();
+
+            const cont = document.getElementById("galeria");
+            cont.innerHTML = "";
+
+            assets.forEach(a => {
+                const div = document.createElement("div");
+                div.className = "item";
+                div.innerText = a.name;
+
+                div.onclick = () => {
+                    assetSeleccionado = a;
+
+                    document.querySelectorAll("#galeria .item")
+                        .forEach(el => el.classList.remove("active"));
+
+                    div.classList.add("active");
+                };
+
+                cont.appendChild(div);
+            });
+        }
+
+        cargarGaleria();
+
+        // ===== CREAR ELEMENTO =====
+        function crearElemento() {
+
+            if (!assetSeleccionado) {
+                alert("Selecciona un asset de la galería");
+                return;
+            }
+
+            const id = "obj" + contador++;
+            const assetId = "asset_" + assetSeleccionado.name.replace(/\W/g, "_");
+
+            if (!document.getElementById(assetId)) {
+                let el;
+
+                if (assetSeleccionado.type === "video") {
+                    el = document.createElement("video");
+                    el.src = "./assets/" + assetSeleccionado.name;
+                    el.id = assetId;
+                    el.loop = true;
+                    el.muted = true;
+                    el.autoplay = true;
+                    el.playsInline = true;
+                } else {
+                    el = document.createElement("img");
+                    el.src = "./assets/" + assetSeleccionado.name;
+                    el.id = assetId;
+                }
+
+                document.getElementById("assets").appendChild(el);
+            }
+
+            let obj;
+
+            if (assetSeleccionado.type === "video") {
+                obj = document.createElement("a-video");
+                obj.setAttribute("src", "#" + assetId);
+                obj.setAttribute("width", "1");
+            } else {
+                obj = document.createElement("a-image");
+                obj.setAttribute("src", "#" + assetId);
+                obj.setAttribute("width", "1");
+            }
+
+            obj.setAttribute("position", "0 0 0.01");
+            obj.setAttribute("id", id);
+            obj.classList.add("draggable");
+
+            document.getElementById("root").appendChild(obj);
+
+            elementos.push({
+                id,
+                asset: assetSeleccionado.name,
+                position: { x: 0, y: 0, z: 0.01 },
+                scale: { x: 1, y: 1, z: 1 }
+            });
+
+            renderLista();
+        }
+
+        // ===== LISTA =====
+        function renderLista() {
+            const lista = document.getElementById("lista");
+            lista.innerHTML = "";
+
+            elementos.forEach(el => {
+                const div = document.createElement("div");
+                div.className = "item";
+                div.innerText = el.id;
+
+                if (seleccionado && seleccionado.id === el.id) {
+                    div.classList.add("active");
+                }
+
+                div.onclick = () => seleccionar(el.id);
+                lista.appendChild(div);
+            });
+        }
+
+        // ===== SELECCIONAR =====
+        function seleccionar(id) {
+            seleccionado = elementos.find(e => e.id === id);
+
+            posX.value = seleccionado.position.x;
+            posY.value = seleccionado.position.y;
+            posZ.value = seleccionado.position.z;
+            scale.value = seleccionado.scale.x;
+
+            document.querySelectorAll("#root > *").forEach(el => {
+                el.setAttribute("material", "opacity", 1);
+            });
+
+            const obj = document.getElementById(seleccionado.id);
+            obj.setAttribute("material", "opacity", 0.7);
+
+            renderLista();
+        }
+
+        // ===== APLICAR =====
+        function aplicar() {
+            if (!seleccionado) return;
+
+            const x = parseFloat(posX.value);
+            const y = parseFloat(posY.value);
+            const z = parseFloat(posZ.value);
+            const s = parseFloat(scale.value);
+
+            seleccionado.position = { x, y, z };
+            seleccionado.scale = { x: s, y: s, z: s };
+
+            const obj = document.getElementById(seleccionado.id);
+            obj.setAttribute("position", `${x} ${y} ${z}`);
+            obj.setAttribute("scale", `${s} ${s} ${s}`);
+        }
+
+        // ===== EXPORTAR =====
+        function guardar() {
+            console.log(JSON.stringify(elementos, null, 2));
+            alert("JSON generado en consola");
+        }
+
+        // ===== DRAG =====
+        let dragging = false;
+        let current = null;
+        let startX = 0;
+        let startY = 0;
+
+        const sceneEl = document.querySelector("a-scene");
+
+        sceneEl.addEventListener("mousedown", (e) => {
+            if (e.target.classList.contains("draggable")) {
+                startX = e.clientX;
+                startY = e.clientY;
+                current = e.target;
+                seleccionar(current.id);
+            }
+        });
+
+        document.addEventListener("mousemove", (e) => {
+
+            if (!current) return;
+
+            if (!dragging) {
+                const dx = Math.abs(e.clientX - startX);
+                const dy = Math.abs(e.clientY - startY);
+
+                if (dx > 5 || dy > 5) {
+                    dragging = true;
+                } else {
+                    return;
+                }
+            }
+
+            const camera = sceneEl.camera || sceneEl.querySelector("a-camera").getObject3D("camera");
+
+            const mouse = new THREE.Vector2();
+            const rect = sceneEl.canvas.getBoundingClientRect();
+
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            const planeZ = current.object3D.position.z;
+
+            const plane = new THREE.Plane(
+                new THREE.Vector3(0, 0, 1),
+                -planeZ
+            );
+
+            const intersect = new THREE.Vector3();
+            raycaster.ray.intersectPlane(plane, intersect);
+
+            if (intersect) {
+                current.object3D.position.set(intersect.x, intersect.y, planeZ);
+
+                const el = elementos.find(e => e.id === current.id);
+                el.position.x = intersect.x;
+                el.position.y = intersect.y;
+
+                posX.value = intersect.x.toFixed(2);
+                posY.value = intersect.y.toFixed(2);
+            }
+        });
+
+        document.addEventListener("mouseup", () => {
+            dragging = false;
+            current = null;
+        });
+
+        // ===== ZOOM =====
+        let zoom = 1;
+
+        sceneEl.addEventListener("wheel", (e) => {
+            e.preventDefault();
+
+            if (e.deltaY < 0) {
+                zoom *= 1.1;
+            } else {
+                zoom *= 0.9;
+            }
+
+            zoom = Math.min(Math.max(zoom, 0.5), 5);
+
+            const root = document.getElementById("root");
+            const mural = document.getElementById("mural");
+
+            root.object3D.scale.set(zoom, zoom, zoom);
+            mural.object3D.scale.set(zoom, zoom, zoom);
+        });
+
+    </script>
 
 </body>
+
 </html>
