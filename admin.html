@@ -114,6 +114,8 @@
         <button onclick="aplicar()">Aplicar</button>
         <button onclick="guardar()">💾 Exportar JSON</button>
 
+        <button onclick="eliminar()">🗑 Eliminar objeto</button>
+
     </div>
 
     <script>
@@ -322,6 +324,32 @@
             a.href = URL.createObjectURL(blob);
             a.download = "escena.json";
             a.click();
+        }
+        
+        // ===== ELIMINAR =====
+        function eliminar() {
+
+            if (!seleccionado) return;
+
+            // eliminar del DOM
+            const obj = document.getElementById(seleccionado.id);
+            if (obj) obj.remove();
+
+            // eliminar del array
+            elementos = elementos.filter(e => e.id !== seleccionado.id);
+
+            // reset selección
+            seleccionado = null;
+
+            // limpiar inputs
+            posX.value = "";
+            posY.value = "";
+            posZ.value = "";
+            scale.value = "";
+
+            renderLista();
+
+            console.log("🗑 Objeto eliminado");
         }
 
         // ===== DRAG =====
