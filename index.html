@@ -52,7 +52,7 @@ body { margin:0; }
     filterMinCF: 0.0001;
     filterBeta: 0.001;
   "
-  renderer="colorManagement: true; physicallyCorrectLights: false;"
+  renderer="colorManagement: true; physicallyCorrectLights: false; precision: mediump;"
   vr-mode-ui="enabled: false"
   device-orientation-permission-ui="enabled: false"
 >
@@ -67,19 +67,18 @@ body { margin:0; }
 
 <script>
 
-// ===== DEBUG TRACKING =====
+// ===== DEBUG =====
 const target = document.querySelector('[mindar-image-target]');
 const debug = document.getElementById("debug");
 
+// ===== TRACKING =====
 target.addEventListener("targetFound", () => {
   debug.innerText = "✅ Detectado";
   target.setAttribute("visible", true);
 
   document.querySelectorAll("video").forEach(v => {
-    try {
-      v.currentTime = 0;
-      v.play();
-    } catch(e){}
+    v.currentTime = 0;
+    v.play().catch(()=>{});
   });
 });
 
@@ -91,7 +90,7 @@ target.addEventListener("targetLost", () => {
 });
 
 
-// ===== CARGAR ESCENA =====
+// ===== ESCENA =====
 async function cargarEscena() {
 
   try {
@@ -108,7 +107,7 @@ async function cargarEscena() {
 
       const assetId = "asset_" + el.asset.replace(/\W/g, "_");
 
-      // ===== CREAR ASSET =====
+      // ===== ASSETS =====
       if (!document.getElementById(assetId)) {
 
         let assetEl;
@@ -120,49 +119,46 @@ async function cargarEscena() {
           assetEl.id = assetId;
 
           assetEl.muted = true;
-          assetEl.autoplay = true;
+          assetEl.autoplay = false; // 🔥 IMPORTANTE
           assetEl.loop = true;
           assetEl.setAttribute("playsinline", "");
           assetEl.setAttribute("webkit-playsinline", "");
           assetEl.crossOrigin = "anonymous";
           assetEl.preload = "auto";
 
-          assetEl.addEventListener("loadeddata", () => {
-            assetEl.play().catch(()=>{});
-          });
-
         } else {
 
           assetEl = document.createElement("img");
           assetEl.src = "assets/" + el.asset;
           assetEl.id = assetId;
-
         }
 
         assets.appendChild(assetEl);
       }
 
-      // ===== CREAR OBJETO (FIX REAL) =====
+      // ===== OBJETO (ESTABLE PARA AR) =====
       let obj = document.createElement("a-plane");
 
       obj.setAttribute("width", "1");
       obj.setAttribute("height", "0.6");
 
-      obj.setAttribute("material", `
-        shader: flat;
-        src: #${assetId};
-        side: double;
-        transparent: true;
-      `);
+      obj.setAttribute("material", {
+        shader: "flat",
+        src: "#" + assetId,
+        side: "double",
+        transparent: true
+      });
 
-      // posición visible
-     obj.setAttribute("position",
-  `${el.position.x} ${el.position.y} ${el.position.z}`
-);
+      obj.setAttribute("position",
+        `${el.position.x} ${el.position.y} ${el.position.z}`
+      );
 
-obj.setAttribute("scale",
-  `${el.scale.x} ${el.scale.y} ${el.scale.z}`
-);
+      obj.setAttribute("scale",
+        `${el.scale.x} ${el.scale.y} ${el.scale.z}`
+      );
+
+      // 🔥 evita problemas de render en AR
+      obj.setAttribute("look-at", "[camera]");
 
       root.appendChild(obj);
     }
