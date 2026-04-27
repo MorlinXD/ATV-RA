@@ -4,8 +4,8 @@
       "id": "obj0",
       "asset": "video.mp4",
       "position": {
-        "x": 0.7,
-        "y": -0.4,
+        "x": 0,
+        "y": 0,
         "z": 0.01
       },
       "scale": {
