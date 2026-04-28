@@ -120,9 +120,18 @@
         Alto <input id="scaleY" type="number" step="0.1"><br>
         Profundidad <input id="scaleZ" type="number" step="0.1"><br>
 
+        <h3>🎨 Chroma Key</h3>
+
+        <input type="color" id="chromaColor" value="#00ff00">
+        <br><br>
+
+        <button onclick="aplicarChroma()">Aplicar color</button>
+
     </div>
 
     <script>
+        let chromaColor = "#00ff00";
+
         AFRAME.registerShader('chromakey', {
             schema: {
                 src: { type: 'map' },
@@ -139,7 +148,9 @@
                         src: { value: null },
                         color: { value: new THREE.Color(data.color) },
                         similarity: { value: data.similarity },
-                        smoothness: { value: data.smoothness }
+                        smoothness: { value: data.smoothness },
+                        transparent: true,
+                        depthTest: false
                     },
                     vertexShader: `
         varying vec2 vUv;
@@ -232,6 +243,27 @@
 
             img.setAttribute("src", url);
         });
+        // ===== aplicar chroma =====
+        function aplicarChroma() {
+            chromaColor = document.getElementById("chromaColor").value;
+
+            if (!seleccionado) return;
+
+            const obj = document.getElementById(seleccionado.id);
+
+            // solo si es video
+            const asset = elementos.find(e => e.id === seleccionado.id);
+
+            if (!asset || !asset.asset.endsWith(".mp4")) return;
+
+            obj.setAttribute("material", {
+                shader: "chromakey",
+                src: obj.getAttribute("material").src,
+                color: chromaColor,
+                similarity: 0.45,
+                smoothness: 0.12
+            });
+        }
 
         // ===== GALERÍA =====
         async function cargarGaleria() {
@@ -295,10 +327,22 @@
             let obj;
 
             if (assetSeleccionado.type === "video") {
-                obj = document.createElement("a-video");
-                obj.setAttribute("src", "#" + assetId);
+
+                obj = document.createElement("a-plane");
+
+                obj.setAttribute("material", {
+                    shader: "chromakey",
+                    src: "#" + assetId,
+                    color: "#00ff00",
+                    similarity: 0.45,
+                    smoothness: 0.12
+                });
+
                 obj.setAttribute("width", "1");
+                obj.setAttribute("height", "0.6");
+
             } else {
+
                 obj = document.createElement("a-image");
                 obj.setAttribute("src", "#" + assetId);
                 obj.setAttribute("width", "1");
