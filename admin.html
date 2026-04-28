@@ -141,17 +141,15 @@
             },
 
             init: function (data) {
-                this.video = null;
 
                 this.material = new THREE.ShaderMaterial({
                     uniforms: {
                         src: { value: null },
                         color: { value: new THREE.Color(data.color) },
                         similarity: { value: data.similarity },
-                        smoothness: { value: data.smoothness },
-                        transparent: true,
-                        depthTest: false
+                        smoothness: { value: data.smoothness }
                     },
+
                     vertexShader: `
         varying vec2 vUv;
         void main() {
@@ -159,41 +157,47 @@
           gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
       `,
+
                     fragmentShader: `
         precision mediump float;
+
         uniform sampler2D src;
         uniform vec3 color;
         uniform float similarity;
         uniform float smoothness;
+
         varying vec2 vUv;
 
         void main() {
           vec4 video = texture2D(src, vUv);
 
           float diff = distance(video.rgb, color);
-
           float alpha = smoothstep(similarity, similarity + smoothness, diff);
 
           gl_FragColor = vec4(video.rgb, video.a * alpha);
         }
       `,
-                    transparent: true
+
+                    transparent: true,
+                    depthTest: false
                 });
             },
 
             update: function (data) {
+
                 const video = document.getElementById(data.src.replace('#', ''));
 
-                if (video) {
-                    const texture = new THREE.VideoTexture(video);
-                    texture.minFilter = THREE.LinearFilter;
-                    texture.magFilter = THREE.LinearFilter;
-                    texture.format = THREE.RGBFormat;
+                if (!video) return;
 
-                    this.material.uniforms.src.value = texture;
-                }
+                const texture = new THREE.VideoTexture(video);
+                texture.minFilter = THREE.LinearFilter;
+                texture.magFilter = THREE.LinearFilter;
+                texture.format = THREE.RGBFormat;
 
+                this.material.uniforms.src.value = texture;
                 this.material.uniforms.color.value = new THREE.Color(data.color);
+                this.material.uniforms.similarity.value = data.similarity;
+                this.material.uniforms.smoothness.value = data.smoothness;
             }
         });
 
@@ -309,12 +313,19 @@
 
                 if (assetSeleccionado.type === "video") {
                     el = document.createElement("video");
+
                     el.src = "./assets/" + assetSeleccionado.name;
                     el.id = assetId;
+
                     el.loop = true;
                     el.muted = true;
                     el.autoplay = true;
                     el.playsInline = true;
+                    el.crossOrigin = "anonymous";
+
+                    el.onloadeddata = () => {
+                        el.play().catch(() => { });
+                    };
                 } else {
                     el = document.createElement("img");
                     el.src = "./assets/" + assetSeleccionado.name;
@@ -333,7 +344,7 @@
                 obj.setAttribute("material", {
                     shader: "chromakey",
                     src: "#" + assetId,
-                    color: "#00ff00",
+                    color: chromaColor,
                     similarity: 0.45,
                     smoothness: 0.12
                 });
@@ -593,6 +604,7 @@
             root.object3D.scale.set(zoom, zoom, zoom);
             mural.object3D.scale.set(zoom, zoom, zoom);
         });
+
 
     </script>
 
