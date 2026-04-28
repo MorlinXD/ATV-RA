@@ -69,6 +69,11 @@
     <!-- IZQUIERDA -->
     <div id="left">
 
+        <h3>📂 Escena</h3>
+
+        <input type="file" id="loadScene" accept=".json">
+        <button onclick="cargarEscena()">Cargar escena</button>
+
         <h3>🖼 Imagen base</h3>
         <input type="file" id="imgBase">
 
@@ -170,6 +175,117 @@
 
             img.setAttribute("src", url);
         });
+        // ===== CARGAR ESCENA =====
+        function cargarEscena() {
+            const input = document.getElementById("loadScene");
+            const file = input.files[0];
+
+            if (!file) {
+                alert("Selecciona un archivo escena.json");
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+
+                try {
+                    const data = JSON.parse(e.target.result);
+
+                    if (!data.elementos) {
+                        alert("Archivo inválido");
+                        return;
+                    }
+
+                    // limpiar escena actual
+                    document.querySelectorAll("#root > *").forEach(el => el.remove());
+
+                    elementos = [];
+                    contador = 0;
+                    seleccionado = null;
+
+                    // reconstruir
+                    data.elementos.forEach((elData) => {
+
+                        const id = elData.id;
+
+                        let obj;
+
+                        const assetId = "asset_" + elData.asset.replace(/\W/g, "_");
+
+                        // crear asset si no existe
+                        if (!document.getElementById(assetId)) {
+
+                            const el = document.createElement(
+                                elData.asset.endsWith(".mp4") ? "video" : "img"
+                            );
+
+                            el.src = "./assets/" + elData.asset;
+                            el.id = assetId;
+
+                            if (elData.asset.endsWith(".mp4")) {
+                                el.loop = true;
+                                el.muted = true;
+                                el.autoplay = true;
+                                el.playsInline = true;
+                            }
+
+                            document.getElementById("assets").appendChild(el);
+                        }
+
+                        // recrear objeto
+                        if (elData.asset.endsWith(".mp4")) {
+
+                            obj = document.createElement("a-plane");
+
+                            obj.setAttribute("material", {
+                                shader: "chromakey",
+                                src: "#" + assetId,
+                                color: chromaColor || "#00ff00",
+                                similarity: 0.45,
+                                smoothness: 0.12
+                            });
+
+                            obj.setAttribute("width", "1");
+                            obj.setAttribute("height", "0.6");
+
+                        } else {
+
+                            obj = document.createElement("a-image");
+                            obj.setAttribute("src", "#" + assetId);
+                            obj.setAttribute("width", "1");
+                        }
+
+                        obj.setAttribute("id", id);
+                        obj.classList.add("draggable");
+
+                        obj.setAttribute("position",
+                            `${elData.position.x} ${elData.position.y} ${elData.position.z}`
+                        );
+
+                        obj.setAttribute("scale",
+                            `${elData.scale.x} ${elData.scale.y} ${elData.scale.z}`
+                        );
+
+                        document.getElementById("root").appendChild(obj);
+
+                        elementos.push(elData);
+
+                        contador++;
+                    });
+
+                    renderLista();
+
+                    console.log("✅ Escena cargada correctamente");
+
+                } catch (err) {
+                    console.error(err);
+                    alert("Error al leer el JSON");
+                }
+            };
+
+            reader.readAsText(file);
+        }
 
         // ===== GALERÍA =====
         async function cargarGaleria() {
@@ -303,26 +419,26 @@
         // ===== APLICAR =====
         function aplicar() {
 
-    if (!seleccionado) return;
+            if (!seleccionado) return;
 
-    const x = parseFloat(posX.value);
-    const y = parseFloat(posY.value);
-    const z = parseFloat(posZ.value);
+            const x = parseFloat(posX.value);
+            const y = parseFloat(posY.value);
+            const z = parseFloat(posZ.value);
 
-    const sx = parseFloat(scaleX.value);
-    const sy = parseFloat(scaleY.value);
-    const sz = parseFloat(scaleZ.value);
+            const sx = parseFloat(scaleX.value);
+            const sy = parseFloat(scaleY.value);
+            const sz = parseFloat(scaleZ.value);
 
-    seleccionado.position = { x, y, z };
-    seleccionado.scale = { x: sx, y: sy, z: sz };
+            seleccionado.position = { x, y, z };
+            seleccionado.scale = { x: sx, y: sy, z: sz };
 
-    const obj = document.getElementById(seleccionado.id);
+            const obj = document.getElementById(seleccionado.id);
 
-    obj.setAttribute("position", `${x} ${y} ${z}`);
-    obj.setAttribute("scale", `${sx} ${sy} ${sz}`);
+            obj.setAttribute("position", `${x} ${y} ${z}`);
+            obj.setAttribute("scale", `${sx} ${sy} ${sz}`);
 
-    console.log("✏️ Objeto actualizado");
-}
+            console.log("✏️ Objeto actualizado");
+        }
 
         // ===== EXPORTAR =====
         function guardar() {
