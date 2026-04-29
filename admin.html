@@ -272,7 +272,20 @@
 
                         document.getElementById("root").appendChild(obj);
 
-                        elementos.push(elData);
+                        elementos.push({
+                            id: id,
+                            asset: elData.asset,
+                            position: {
+                                x: elData.position.x,
+                                y: elData.position.y,
+                                z: elData.position.z
+                            },
+                            scale: {
+                                x: elData.scale.x,
+                                y: elData.scale.y,
+                                z: elData.scale.z
+                            }
+                        });
                         contador++;
                     });
 
