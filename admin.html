@@ -203,6 +203,7 @@
                     elementos = [];
                     contador = 0;
                     seleccionado = null;
+                    renderLista();
 
                     // reconstruir
                     data.elementos.forEach((elData) => {
@@ -485,6 +486,7 @@
 
             // reset selección
             seleccionado = null;
+            renderLista();
 
             // limpiar inputs
             posX.value = "";
