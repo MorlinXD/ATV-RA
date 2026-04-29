@@ -48,32 +48,33 @@
   <div id="msg">📷 Apunta al mural</div>
   <div id="debug">Estado: iniciando...</div>
 
-  <a-scene mindar-image="
-    imageTargetSrc: ./assets/teclado.mind;
-    autoStart: true;
-    uiLoading: yes;
-    uiScanning: yes;
-  " vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+  <a-scene
+    mindar-image="
+      imageTargetSrc: ./assets/teclado.mind;
+      autoStart: true;
+      uiLoading: yes;
+      uiScanning: yes;
+    "
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+  >
 
     <a-assets id="assets"></a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-    <!-- IMPORTANTE: NO ocultar el target -->
     <a-entity mindar-image-target="targetIndex: 0" id="target">
-
-      <!-- SOLO ESTE SE OCULTA -->
-      <a-entity id="root"></a-entity>
-
+      <a-entity id="root" visible="false"></a-entity>
     </a-entity>
 
   </a-scene>
 
   <script>
+    // ===== SHADER CHROMA KEY =====
     AFRAME.registerShader('chromakey', {
       schema: {
         src: { type: 'map' },
-        color: { default: { x: 0.0, y: 1.0, z: 0.0 } }, // verde
+        color: { default: { x: 0.0, y: 1.0, z: 0.0 } },
         similarity: { default: 0.4 },
         smoothness: { default: 0.1 }
       },
@@ -87,29 +88,26 @@
             smoothness: { value: data.smoothness }
           },
           vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-        }
-      `,
+            varying vec2 vUv;
+            void main() {
+              vUv = uv;
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+            }
+          `,
           fragmentShader: `
-        uniform sampler2D map;
-        uniform vec3 color;
-        uniform float similarity;
-        uniform float smoothness;
-        varying vec2 vUv;
+            uniform sampler2D map;
+            uniform vec3 color;
+            uniform float similarity;
+            uniform float smoothness;
+            varying vec2 vUv;
 
-        void main() {
-          vec4 videoColor = texture2D(map, vUv);
-
-          float diff = distance(videoColor.rgb, color);
-
-          float alpha = smoothstep(similarity, similarity + smoothness, diff);
-
-          gl_FragColor = vec4(videoColor.rgb, alpha);
-        }
-      `,
+            void main() {
+              vec4 videoColor = texture2D(map, vUv);
+              float diff = distance(videoColor.rgb, color);
+              float alpha = smoothstep(similarity, similarity + smoothness, diff);
+              gl_FragColor = vec4(videoColor.rgb, alpha);
+            }
+          `,
           transparent: true
         });
       }
@@ -119,30 +117,26 @@
     const target = document.getElementById("target");
     const root = document.getElementById("root");
 
+    // ===== TRACKING =====
     target.addEventListener("targetFound", () => {
       debug.innerText = "✅ Detectado";
-
-      // SOLO mostrar contenido
       root.setAttribute("visible", true);
 
       document.querySelectorAll("video").forEach(v => {
-        v.play().catch(() => { });
+        v.play().catch(() => {});
       });
-
     });
 
     target.addEventListener("targetLost", () => {
       debug.innerText = "❌ Perdido";
-
-      // 🔥 SOLO ocultar contenido, NO el target
       root.setAttribute("visible", false);
 
       document.querySelectorAll("video").forEach(v => {
         v.pause();
       });
-
     });
 
+    // ===== CARGA DE ESCENA =====
     async function cargarEscena() {
 
       const res = await fetch("escena.json");
@@ -154,19 +148,28 @@
 
         const id = "asset_" + el.asset.replace(/\W/g, "_");
 
+        // ===== CREAR ASSET =====
         if (!document.getElementById(id)) {
 
           let a;
 
-          if (el.asset.match(/\.(mp4|webm)$/)) {
+          if (el.asset.match(/\.(mp4|webm|mov)$/i)) {
 
             a = document.createElement("video");
             a.src = "assets/" + el.asset;
             a.id = id;
+
             a.loop = true;
             a.muted = true;
-            a.playsInline = true;
             a.autoplay = true;
+            a.playsInline = true;
+            a.setAttribute("webkit-playsinline", "true");
+            a.crossOrigin = "anonymous";
+
+            // 🔥 FORZAR PLAY
+            a.addEventListener("loadeddata", () => {
+              a.play().catch(e => console.log("Play bloqueado:", e));
+            });
 
           } else {
 
@@ -179,19 +182,20 @@
           assets.appendChild(a);
         }
 
+        // ===== CREAR OBJETO =====
         const obj = document.createElement("a-plane");
 
         obj.setAttribute("width", "1");
         obj.setAttribute("height", "0.6");
 
         obj.setAttribute("material", `
-  shader: chromakey;
-  src: #${id};
-  color: 0 1 0;
-  similarity: 0.45;
-  smoothness: 0.1;
-  side: double;
-`);
+          shader: chromakey;
+          src: #${id};
+          color: 0 1 0;
+          similarity: 0.45;
+          smoothness: 0.1;
+          side: double;
+        `);
 
         obj.setAttribute("position",
           `${el.position.x} ${el.position.y} ${el.position.z}`
@@ -210,5 +214,4 @@
   </script>
 
 </body>
-
 </html>
