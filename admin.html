@@ -208,33 +208,34 @@
                     data.elementos.forEach((elData) => {
 
                         const id = elData.id;
-
                         let obj;
 
                         const assetId = "asset_" + elData.asset.replace(/\W/g, "_");
 
+                        // detectar si es video
+                        const isVideo = /\.(mp4|mov|webm|ogg)$/i.test(elData.asset);
+
                         // crear asset si no existe
                         if (!document.getElementById(assetId)) {
 
-                            const el = document.createElement(
-                                elData.asset.endsWith(".mp4") ? "video" : "img"
-                            );
+                            const el = document.createElement(isVideo ? "video" : "img");
 
                             el.src = "./assets/" + elData.asset;
                             el.id = assetId;
 
-                            if (elData.asset.endsWith(".mp4")) {
+                            if (isVideo) {
                                 el.loop = true;
                                 el.muted = true;
                                 el.autoplay = true;
                                 el.playsInline = true;
+                                el.crossOrigin = "anonymous";
                             }
 
                             document.getElementById("assets").appendChild(el);
                         }
 
                         // recrear objeto
-                        if (elData.asset.endsWith(".mp4")) {
+                        if (isVideo) {
 
                             obj = document.createElement("a-plane");
 
@@ -259,18 +260,19 @@
                         obj.setAttribute("id", id);
                         obj.classList.add("draggable");
 
-                        obj.setAttribute("position",
+                        obj.setAttribute(
+                            "position",
                             `${elData.position.x} ${elData.position.y} ${elData.position.z}`
                         );
 
-                        obj.setAttribute("scale",
+                        obj.setAttribute(
+                            "scale",
                             `${elData.scale.x} ${elData.scale.y} ${elData.scale.z}`
                         );
 
                         document.getElementById("root").appendChild(obj);
 
                         elementos.push(elData);
-
                         contador++;
                     });
 
@@ -283,7 +285,6 @@
                     alert("Error al leer el JSON");
                 }
             };
-
             reader.readAsText(file);
         }
 
