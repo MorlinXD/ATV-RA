@@ -1,1 +1,12 @@
 <video src="assets/vide.mp4" controls autoplay muted playsinline></video>
+<script>
+
+// 🔥 DESBLOQUEO GLOBAL DE VIDEO
+document.body.addEventListener("click", () => {
+  document.querySelectorAll("video").forEach(v => {
+    v.muted = true;
+    v.play().catch(()=>{});
+  });
+}, { once: true });
+
+</script>
