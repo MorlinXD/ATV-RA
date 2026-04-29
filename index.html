@@ -36,10 +36,27 @@
       border-radius: 20px;
       z-index: 999;
     }
+
+    #startBtn {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 15px 25px;
+      background: #00ffcc;
+      color: black;
+      border: none;
+      font-size: 18px;
+      border-radius: 10px;
+      z-index: 1000;
+      cursor: pointer;
+    }
   </style>
 </head>
 
 <body>
+
+<button id="startBtn">Iniciar experiencia</button>
 
 <div id="msg">📷 Apunta al mural</div>
 <div id="debug">Estado: iniciando...</div>
@@ -47,7 +64,7 @@
 <a-scene
   mindar-image="
     imageTargetSrc: ./assets/teclado.mind;
-    autoStart: true;
+    autoStart: false;
     uiLoading: yes;
     uiScanning: yes;
   "
@@ -70,6 +87,23 @@
 const debug = document.getElementById("debug");
 const target = document.getElementById("target");
 const root = document.getElementById("root");
+const startBtn = document.getElementById("startBtn");
+const sceneEl = document.querySelector("a-scene");
+
+// ===== BOTÓN INICIO (DESBLOQUEA VIDEO)
+startBtn.addEventListener("click", async () => {
+
+  startBtn.style.display = "none";
+
+  // iniciar AR manualmente
+  await sceneEl.systems["mindar-image-system"].start();
+
+  // desbloquear videos
+  document.querySelectorAll("video").forEach(v => {
+    v.play().catch(()=>{});
+  });
+
+});
 
 // ===== TRACKING =====
 target.addEventListener("targetFound", () => {
@@ -77,6 +111,7 @@ target.addEventListener("targetFound", () => {
   root.setAttribute("visible", true);
 
   document.querySelectorAll("video").forEach(v => {
+    v.currentTime = 0;
     v.play().catch(()=>{});
   });
 });
@@ -101,10 +136,9 @@ async function cargarEscena() {
     for (const el of data.elementos) {
 
       const id = "asset_" + el.asset.replace(/\W/g, "_");
+      const isVideo = el.asset.match(/\.(mp4|webm)$/i);
 
-      let isVideo = el.asset.match(/\.(mp4|webm)$/i);
-
-      // ===== CREAR ASSET =====
+      // ===== ASSET =====
       if (!document.getElementById(id)) {
 
         let media;
@@ -120,14 +154,7 @@ async function cargarEscena() {
           media.playsInline = true;
           media.setAttribute("webkit-playsinline", "true");
           media.crossOrigin = "anonymous";
-
-          // 🔥 CLAVE: esperar carga
-          await new Promise((resolve) => {
-            media.onloadeddata = () => {
-              media.play().catch(()=>{});
-              resolve();
-            };
-          });
+          media.preload = "auto";
 
         } else {
 
@@ -135,25 +162,28 @@ async function cargarEscena() {
           media.src = "assets/" + el.asset;
           media.id = id;
 
-          await new Promise((resolve) => {
-            media.onload = resolve;
-          });
+          await new Promise(res => media.onload = res);
         }
 
         assets.appendChild(media);
       }
 
-      // ===== CREAR OBJETO =====
-      const obj = document.createElement("a-plane");
+      // ===== OBJETO =====
+      let obj;
 
-      obj.setAttribute("width", "1");
-      obj.setAttribute("height", "0.6");
+      if (isVideo) {
 
-      obj.setAttribute("material", {
-        shader: "flat",
-        src: "#" + id,
-        side: "double"
-      });
+        obj = document.createElement("a-video");
+        obj.setAttribute("src", "#" + id);
+        obj.setAttribute("width", "1");
+        obj.setAttribute("height", "0.6");
+
+      } else {
+
+        obj = document.createElement("a-image");
+        obj.setAttribute("src", "#" + id);
+        obj.setAttribute("width", "1");
+      }
 
       obj.setAttribute("position",
         `${el.position.x} ${el.position.y} ${el.position.z}`
@@ -164,17 +194,6 @@ async function cargarEscena() {
       );
 
       root.appendChild(obj);
-
-      // 🔥 FORZAR UPDATE PARA VIDEO
-      if (isVideo) {
-        setTimeout(() => {
-          const mesh = obj.getObject3D("mesh");
-          if (mesh && mesh.material.map) {
-            mesh.material.map.needsUpdate = true;
-          }
-        }, 500);
-      }
-
     }
 
     debug.innerText = "🎯 Escena lista";
