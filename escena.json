@@ -2,7 +2,9 @@
   "elementos": [
     {
       "id": "obj0",
-      "asset": "Anim Persona",
+      "type": "png_sequence",
+      "prefix": "persona/frame_",
+      "frames": 60,
       "position": {
         "x": 0,
         "y": 0,
