@@ -2,85 +2,15 @@
   "elementos": [
     {
       "id": "obj0",
-      "asset": "Recurso 21.png",
-      "position": {
-        "x": 0.251,
-        "y": 0.346,
-        "z": 0.01
-      },
-      "scale": {
-        "x": 1.5,
-        "y": 0.2,
-        "z": 1
-      }
-    },
-    {
-      "id": "obj1",
-      "asset": "Recurso 26.png",
-      "position": {
-        "x": -0.75,
-        "y": 0.346,
-        "z": 0.01
-      },
-      "scale": {
-        "x": 0.5,
-        "y": 0.2,
-        "z": 1
-      }
-    },
-    {
-      "id": "obj2",
-      "asset": "Recurso 32.png",
+      "asset": "Anim Persona",
       "position": {
         "x": 0,
-        "y": -0.395,
-        "z": 0.01
-      },
-      "scale": {
-        "x": 2,
-        "y": 0.3,
-        "z": 1
-      }
-    },
-    {
-      "id": "obj6",
-      "asset": "Recurso 25.png",
-      "position": {
-        "x": -0.39,
         "y": 0,
         "z": 0.01
       },
       "scale": {
-        "x": 0.3,
-        "y": 0.3,
-        "z": 1
-      }
-    },
-    {
-      "id": "obj8",
-      "asset": "Recurso 28.png",
-      "position": {
-        "x": 0,
-        "y": -0.643,
-        "z": 0.01
-      },
-      "scale": {
-        "x": 2,
-        "y": 0.2,
-        "z": 1
-      }
-    },
-    {
-      "id": "obj11",
-      "asset": "Recurso 24.png",
-      "position": {
-        "x": 0.5,
-        "y": 0,
-        "z": 0.01
-      },
-      "scale": {
-        "x": 0.3,
-        "y": 0.3,
+        "x": 1,
+        "y": 1,
         "z": 1
       }
     }
