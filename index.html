@@ -59,190 +59,177 @@
 
 <body>
 
-<button id="startBtn">Iniciar experiencia</button>
+  <button id="startBtn">Iniciar experiencia</button>
 
-<div id="msg">📷 Apunta al mural</div>
-<div id="debug">Estado: iniciando...</div>
+  <div id="msg">📷 Apunta al mural</div>
+  <div id="debug">Estado: iniciando...</div>
 
-<a-scene mindar-image="
+  <a-scene mindar-image="
   imageTargetSrc: ./assets/teclado.mind;
   autoStart: false;
   uiLoading: yes;
   uiScanning: yes;
 " vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
 
-  <a-assets id="assets"></a-assets>
+    <a-assets id="assets"></a-assets>
 
-  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+    <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-  <a-entity mindar-image-target="targetIndex: 0" id="target">
-    <a-entity id="root" visible="false"></a-entity>
-  </a-entity>
+    <a-entity mindar-image-target="targetIndex: 0" id="target">
+      <a-entity id="root" visible="false"></a-entity>
+    </a-entity>
 
-</a-scene>
+  </a-scene>
 
-<script>
+  <script>
 
-const debug = document.getElementById("debug");
-const target = document.getElementById("target");
-const root = document.getElementById("root");
-const startBtn = document.getElementById("startBtn");
-const sceneEl = document.querySelector("a-scene");
+    const debug = document.getElementById("debug");
+    const target = document.getElementById("target");
+    const root = document.getElementById("root");
+    const startBtn = document.getElementById("startBtn");
+    const sceneEl = document.querySelector("a-scene");
 
-// ===== BOTÓN INICIO
-startBtn.addEventListener("click", async () => {
+    // ===== BOTÓN INICIO
+    startBtn.addEventListener("click", async () => {
 
-  startBtn.style.display = "none";
+      startBtn.style.display = "none";
 
-  await sceneEl.systems["mindar-image-system"].start();
+      await sceneEl.systems["mindar-image-system"].start();
 
-  document.querySelectorAll("video").forEach(v => {
-    v.play().catch(() => {});
-  });
+      document.querySelectorAll("video").forEach(v => {
+        v.play().catch(() => { });
+      });
 
-});
+    });
 
-// ===== TRACKING
-target.addEventListener("targetFound", () => {
-  debug.innerText = "✅ Detectado";
-  root.setAttribute("visible", true);
-});
+    // ===== TRACKING
+    target.addEventListener("targetFound", () => {
+      debug.innerText = "✅ Detectado";
+      root.setAttribute("visible", true);
+    });
 
-target.addEventListener("targetLost", () => {
-  debug.innerText = "❌ Perdido";
-  root.setAttribute("visible", false);
-});
+    target.addEventListener("targetLost", () => {
+      debug.innerText = "❌ Perdido";
+      root.setAttribute("visible", false);
+    });
 
-// ===== CARGA ESCENA
-async function cargarEscena() {
+    // ===== CARGA ESCENA
+    async function cargarEscena() {
 
-  try {
+      try {
 
-    debug.innerText = "📦 Cargando escena...";
+        debug.innerText = "📦 Cargando escena...";
 
-    const res = await fetch("escena.json");
-    const data = await res.json();
+        const res = await fetch("escena.json");
+        const data = await res.json();
 
-    const assets = document.getElementById("assets");
+        const assets = document.getElementById("assets");
 
-    for (const el of data.elementos) {
+        for (const el of data.elementos) {
 
-      const id = "asset_" + (el.asset || "seq_" + Math.random()).replace(/\W/g, "_");
-      const isVideo = el.asset && el.asset.match(/\.(mp4|webm)$/i);
+          const id = "asset_" + (el.asset || "seq_" + Math.random()).replace(/\W/g, "_");
+          const isVideo = el.asset && el.asset.match(/\.(mp4|webm)$/i);
 
-      let obj;
+          let obj;
 
-      // ===== PNG SEQUENCE (ANIMACIÓN)
-      if (el.type === "png_sequence") {
+          // ===== PNG SEQUENCE
+          if (el.type === "png_sequence") {
 
-        const totalFrames = el.frames;
-        const prefix = el.prefix;
+            const totalFrames = el.frames;
+            const prefix = el.prefix;
 
-        let currentFrame = 1;
+            let currentFrame = 1;
 
-        obj = document.createElement("a-image");
-        obj.setAttribute("width", "1");
-        obj.setAttribute("material", "alphaTest: 0.5; transparent: true");
+            obj = document.createElement("a-image");
+            obj.setAttribute("width", "1");
 
-        function getFrame(n) {
-          return `assets/${prefix}${String(n).padStart(4, "0")}.png`;
-        }
+            function getFrame(n) {
+              return `assets/${prefix}${String(n).padStart(4, "0")}.png`;
+            }
 
-        // ===== PRELOAD
-        const frames = [];
-        for (let i = 1; i <= totalFrames; i++) {
-          const img = new Image();
-          img.src = getFrame(i);
-          frames.push(img);
-        }
+            obj.setAttribute("src", getFrame(1));
 
-        // esperar a que cargue el primer frame
-        await new Promise(res => {
-          frames[0].onload = res;
-        });
+            let lastTime = 0;
+            const fps = 24;
+            const interval = 1000 / fps;
 
-        obj.setAttribute("src", frames[0].src);
+            function animar(time) {
 
-        // ===== ANIMACIÓN FLUIDA
-        let lastTime = 0;
-        const fps = 24;
-        const interval = 1000 / fps;
+              if (time - lastTime >= interval) {
+                currentFrame++;
+                if (currentFrame > totalFrames) currentFrame = 1;
 
-        function animar(time) {
+                obj.setAttribute("src", getFrame(currentFrame));
 
-          if (time - lastTime >= interval) {
+                lastTime = time;
+              }
 
-            currentFrame++;
-            if (currentFrame > totalFrames) currentFrame = 1;
+              requestAnimationFrame(animar);
+            }
 
-            obj.setAttribute("src", frames[currentFrame - 1].src);
+            requestAnimationFrame(animar);
 
-            lastTime = time;
           }
 
-          requestAnimationFrame(animar);
+          // ===== VIDEO
+          else if (isVideo) {
+
+            if (!document.getElementById(id)) {
+              const media = document.createElement("video");
+              media.src = "assets/" + el.asset;
+              media.id = id;
+              media.loop = true;
+              media.muted = true;
+              media.playsInline = true;
+              media.crossOrigin = "anonymous";
+              assets.appendChild(media);
+            }
+
+            obj = document.createElement("a-video");
+            obj.setAttribute("src", "#" + id);
+            obj.setAttribute("width", "1");
+            obj.setAttribute("height", "0.6");
+
+          }
+
+          // ===== IMAGEN
+          else {
+
+            if (!document.getElementById(id)) {
+              const media = document.createElement("img");
+              media.src = "assets/" + el.asset;
+              media.id = id;
+              assets.appendChild(media);
+            }
+
+            obj = document.createElement("a-image");
+            obj.setAttribute("src", "#" + id);
+            obj.setAttribute("width", "1");
+          }
+
+          obj.setAttribute("position",
+            `${el.position.x} ${el.position.y} ${el.position.z}`
+          );
+
+          obj.setAttribute("scale",
+            `${el.scale.x} ${el.scale.y} ${el.scale.z}`
+          );
+
+          root.appendChild(obj);
         }
 
-        requestAnimationFrame(animar);
+        debug.innerText = "🎯 Escena lista";
+
+      } catch (err) {
+        console.error(err);
+        debug.innerText = "💥 Error";
       }
-
-      // ===== VIDEO
-      else if (isVideo) {
-
-        if (!document.getElementById(id)) {
-          const media = document.createElement("video");
-          media.src = "assets/" + el.asset;
-          media.id = id;
-          media.loop = true;
-          media.muted = true;
-          media.playsInline = true;
-          media.crossOrigin = "anonymous";
-          assets.appendChild(media);
-        }
-
-        obj = document.createElement("a-video");
-        obj.setAttribute("src", "#" + id);
-        obj.setAttribute("width", "1");
-        obj.setAttribute("height", "0.6");
-      }
-
-      // ===== IMAGEN
-      else {
-
-        if (!document.getElementById(id)) {
-          const media = document.createElement("img");
-          media.src = "assets/" + el.asset;
-          media.id = id;
-          assets.appendChild(media);
-        }
-
-        obj = document.createElement("a-image");
-        obj.setAttribute("src", "#" + id);
-        obj.setAttribute("width", "1");
-      }
-
-      obj.setAttribute("position",
-        `${el.position.x} ${el.position.y} ${el.position.z}`
-      );
-
-      obj.setAttribute("scale",
-        `${el.scale.x} ${el.scale.y} ${el.scale.z}`
-      );
-
-      root.appendChild(obj);
     }
 
-    debug.innerText = "🎯 Escena lista";
+    cargarEscena();
 
-  } catch (err) {
-    console.error(err);
-    debug.innerText = "💥 Error";
-  }
-}
-
-cargarEscena();
-
-</script>
+  </script>
 
 </body>
+
 </html>
