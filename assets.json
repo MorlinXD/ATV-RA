@@ -13,5 +13,5 @@
   { "name": "manos.mp4", "type": "video" },
   { "name": "nino.mp4", "type": "video"},
   { "name": "pajaro.mp4", "type": "video"},
-  { "name": "Anim Persona", "type": "png_sequence", "prefix": "persona/frame_", "frames": 60}
+  { "name": "Anim Persona", "type": "png_sequence", "prefix": "persona/frame_", "frames": 121}
 ]
