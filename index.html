@@ -10,14 +10,17 @@
   <script src="https://unpkg.com/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    body { margin: 0; overflow: hidden; }
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
 
     #debug {
       position: fixed;
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.7);
+      background: rgba(0, 0, 0, 0.7);
       color: #00ffcc;
       padding: 8px 16px;
       border-radius: 10px;
@@ -30,7 +33,7 @@
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.6);
+      background: rgba(0, 0, 0, 0.6);
       color: white;
       padding: 10px 20px;
       border-radius: 20px;
@@ -57,6 +60,7 @@
 <body>
 
 <button id="startBtn">Iniciar experiencia</button>
+
 <div id="msg">📷 Apunta al mural</div>
 <div id="debug">Estado: iniciando...</div>
 
@@ -87,12 +91,15 @@ const sceneEl = document.querySelector("a-scene");
 
 // ===== BOTÓN INICIO
 startBtn.addEventListener("click", async () => {
+
   startBtn.style.display = "none";
+
   await sceneEl.systems["mindar-image-system"].start();
 
   document.querySelectorAll("video").forEach(v => {
-    v.play().catch(()=>{});
+    v.play().catch(() => {});
   });
+
 });
 
 // ===== TRACKING
@@ -105,10 +112,6 @@ target.addEventListener("targetLost", () => {
   debug.innerText = "❌ Perdido";
   root.setAttribute("visible", false);
 });
-
-// ===== SISTEMA GLOBAL DE ANIMACIONES
-const animaciones = [];
-let loopIniciado = false;
 
 // ===== CARGA ESCENA
 async function cargarEscena() {
@@ -124,16 +127,18 @@ async function cargarEscena() {
 
     for (const el of data.elementos) {
 
-      const id = "asset_" + (el.asset || Math.random()).toString().replace(/\W/g, "_");
+      const id = "asset_" + (el.asset || "seq_" + Math.random()).replace(/\W/g, "_");
       const isVideo = el.asset && el.asset.match(/\.(mp4|webm)$/i);
 
       let obj;
 
-      // ===== PNG SEQUENCE
+      // ===== PNG SEQUENCE (ANIMACIÓN)
       if (el.type === "png_sequence") {
 
         const totalFrames = el.frames;
         const prefix = el.prefix;
+
+        let currentFrame = 1;
 
         obj = document.createElement("a-image");
         obj.setAttribute("width", "1");
@@ -143,7 +148,7 @@ async function cargarEscena() {
           return `assets/${prefix}${String(n).padStart(4, "0")}.png`;
         }
 
-        // preload
+        // ===== PRELOAD
         const frames = [];
         for (let i = 1; i <= totalFrames; i++) {
           const img = new Image();
@@ -151,16 +156,34 @@ async function cargarEscena() {
           frames.push(img);
         }
 
-        await new Promise(res => frames[0].onload = res);
+        // esperar a que cargue el primer frame
+        await new Promise(res => {
+          frames[0].onload = res;
+        });
 
         obj.setAttribute("src", frames[0].src);
 
-        animaciones.push({
-          obj,
-          frames,
-          currentFrame: 0,
-          totalFrames
-        });
+        // ===== ANIMACIÓN FLUIDA
+        let lastTime = 0;
+        const fps = 24;
+        const interval = 1000 / fps;
+
+        function animar(time) {
+
+          if (time - lastTime >= interval) {
+
+            currentFrame++;
+            if (currentFrame > totalFrames) currentFrame = 1;
+
+            obj.setAttribute("src", frames[currentFrame - 1].src);
+
+            lastTime = time;
+          }
+
+          requestAnimationFrame(animar);
+        }
+
+        requestAnimationFrame(animar);
       }
 
       // ===== VIDEO
@@ -198,40 +221,15 @@ async function cargarEscena() {
         obj.setAttribute("width", "1");
       }
 
-      obj.setAttribute("position", `${el.position.x} ${el.position.y} ${el.position.z}`);
-      obj.setAttribute("scale", `${el.scale.x} ${el.scale.y} ${el.scale.z}`);
+      obj.setAttribute("position",
+        `${el.position.x} ${el.position.y} ${el.position.z}`
+      );
+
+      obj.setAttribute("scale",
+        `${el.scale.x} ${el.scale.y} ${el.scale.z}`
+      );
 
       root.appendChild(obj);
-    }
-
-    // ===== LOOP GLOBAL (ULTRA IMPORTANTE)
-    if (!loopIniciado) {
-
-      let lastTime = 0;
-      const fps = 24;
-      const interval = 1000 / fps;
-
-      function animar(time) {
-
-        if (time - lastTime >= interval) {
-
-          animaciones.forEach(anim => {
-            anim.currentFrame++;
-            if (anim.currentFrame >= anim.totalFrames) {
-              anim.currentFrame = 0;
-            }
-
-            anim.obj.setAttribute("src", anim.frames[anim.currentFrame].src);
-          });
-
-          lastTime = time;
-        }
-
-        requestAnimationFrame(animar);
-      }
-
-      requestAnimationFrame(animar);
-      loopIniciado = true;
     }
 
     debug.innerText = "🎯 Escena lista";
