@@ -10,14 +10,17 @@
   <script src="https://unpkg.com/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    body { margin: 0; overflow: hidden; }
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
 
     #debug {
       position: fixed;
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.7);
+      background: rgba(0, 0, 0, 0.7);
       color: #00ffcc;
       padding: 8px 16px;
       border-radius: 10px;
@@ -30,7 +33,7 @@
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.6);
+      background: rgba(0, 0, 0, 0.6);
       color: white;
       padding: 10px 20px;
       border-radius: 20px;
@@ -56,157 +59,168 @@
 
 <body>
 
-<button id="startBtn">Iniciar experiencia</button>
+  <button id="startBtn">Iniciar experiencia</button>
 
-<div id="msg">📷 Apunta al mural</div>
-<div id="debug">Estado: iniciando...</div>
+  <div id="msg">📷 Apunta al mural</div>
+  <div id="debug">Estado: iniciando...</div>
 
-<a-scene
-  mindar-image="
+  <a-scene mindar-image="
     imageTargetSrc: ./assets/teclado.mind;
     autoStart: false;
     uiLoading: yes;
     uiScanning: yes;
-  "
-  vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false"
->
+  " vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
 
-<a-assets id="assets"></a-assets>
+    <a-assets id="assets"></a-assets>
 
-<a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+    <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
 
-<a-entity mindar-image-target="targetIndex: 0" id="target">
-  <a-entity id="root" visible="false"></a-entity>
-</a-entity>
+    <a-entity mindar-image-target="targetIndex: 0" id="target">
+      <a-entity id="root" visible="false"></a-entity>
+    </a-entity>
 
-</a-scene>
+  </a-scene>
 
-<script>
+  <script>
 
-const debug = document.getElementById("debug");
-const target = document.getElementById("target");
-const root = document.getElementById("root");
-const startBtn = document.getElementById("startBtn");
-const sceneEl = document.querySelector("a-scene");
+    const debug = document.getElementById("debug");
+    const target = document.getElementById("target");
+    const root = document.getElementById("root");
+    const startBtn = document.getElementById("startBtn");
+    const sceneEl = document.querySelector("a-scene");
 
-// ===== BOTÓN INICIO (DESBLOQUEA VIDEO)
-startBtn.addEventListener("click", async () => {
+    // ===== BOTÓN INICIO (DESBLOQUEA VIDEO)
+    startBtn.addEventListener("click", async () => {
 
-  startBtn.style.display = "none";
+      startBtn.style.display = "none";
 
-  // iniciar AR manualmente
-  await sceneEl.systems["mindar-image-system"].start();
+      // iniciar AR manualmente
+      await sceneEl.systems["mindar-image-system"].start();
 
-  // desbloquear videos
-  document.querySelectorAll("video").forEach(v => {
-    v.play().catch(()=>{});
-  });
+      // desbloquear videos
+      document.querySelectorAll("video").forEach(v => {
+        v.play().catch(() => { });
+      });
 
-});
+    });
 
-// ===== TRACKING =====
-target.addEventListener("targetFound", () => {
-  debug.innerText = "✅ Detectado";
-  root.setAttribute("visible", true);
+    // ===== TRACKING =====
+    target.addEventListener("targetFound", () => {
+      debug.innerText = "✅ Detectado";
+      root.setAttribute("visible", true);
 
-  document.querySelectorAll("video").forEach(v => {
-    v.currentTime = 0;
-    v.play().catch(()=>{});
-  });
-});
+      document.querySelectorAll("video").forEach(v => {
+        v.currentTime = 0;
+        v.play().catch(() => { });
+      });
+    });
 
-target.addEventListener("targetLost", () => {
-  debug.innerText = "❌ Perdido";
-  root.setAttribute("visible", false);
-});
+    target.addEventListener("targetLost", () => {
+      debug.innerText = "❌ Perdido";
+      root.setAttribute("visible", false);
+    });
 
-// ===== CARGA DE ESCENA =====
-async function cargarEscena() {
+    // ===== CARGA DE ESCENA =====
+    async function cargarEscena() {
 
-  try {
+      try {
 
-    debug.innerText = "📦 Cargando escena...";
+        debug.innerText = "📦 Cargando escena...";
 
-    const res = await fetch("escena.json");
-    const data = await res.json();
+        const res = await fetch("escena.json");
+        const data = await res.json();
 
-    const assets = document.getElementById("assets");
+        const assets = document.getElementById("assets");
 
-    for (const el of data.elementos) {
+        for (const el of data.elementos) {
 
-      const id = "asset_" + el.asset.replace(/\W/g, "_");
-      const isVideo = el.asset.match(/\.(mp4|webm)$/i);
+          const id = "asset_" + el.asset.replace(/\W/g, "_");
+          const isVideo = el.asset.match(/\.(mp4|webm)$/i);
 
-      // ===== ASSET =====
-      if (!document.getElementById(id)) {
+          // ===== ASSET =====
+          if (!document.getElementById(id)) {
 
-        let media;
+            let media;
 
-        if (isVideo) {
+            if (el.type === "png_sequence") {
 
-          media = document.createElement("video");
-          media.src = "assets/" + el.asset;
-          media.id = id;
+              const totalFrames = el.frames;
+              const prefix = el.prefix;
 
-          media.loop = true;
-          media.muted = true;
-          media.playsInline = true;
-          media.setAttribute("webkit-playsinline", "true");
-          media.crossOrigin = "anonymous";
-          media.preload = "auto";
+              let currentFrame = 1;
 
-        } else {
+              obj = document.createElement("a-image");
+              obj.setAttribute("width", "1");
 
-          media = document.createElement("img");
-          media.src = "assets/" + el.asset;
-          media.id = id;
+              function getFrame(n) {
+                return `assets/${prefix}${String(n).padStart(4, "0")}.png`;
+              }
 
-          await new Promise(res => media.onload = res);
+              obj.setAttribute("src", getFrame(1));
+
+              setInterval(() => {
+                currentFrame++;
+                if (currentFrame > totalFrames) currentFrame = 1;
+                obj.setAttribute("src", getFrame(currentFrame));
+              }, 1000 / 24);
+
+            } else if (isVideo) {
+
+              obj = document.createElement("a-video");
+              obj.setAttribute("src", "#" + id);
+              obj.setAttribute("width", "1");
+              obj.setAttribute("height", "0.6");
+
+            } else {
+
+              obj = document.createElement("a-image");
+              obj.setAttribute("src", "#" + id);
+              obj.setAttribute("width", "1");
+            }
+
+            assets.appendChild(media);
+          }
+
+          // ===== OBJETO =====
+          let obj;
+
+          if (isVideo) {
+
+            obj = document.createElement("a-video");
+            obj.setAttribute("src", "#" + id);
+            obj.setAttribute("width", "1");
+            obj.setAttribute("height", "0.6");
+
+          } else {
+
+            obj = document.createElement("a-image");
+            obj.setAttribute("src", "#" + id);
+            obj.setAttribute("width", "1");
+          }
+
+          obj.setAttribute("position",
+            `${el.position.x} ${el.position.y} ${el.position.z}`
+          );
+
+          obj.setAttribute("scale",
+            `${el.scale.x} ${el.scale.y} ${el.scale.z}`
+          );
+
+          root.appendChild(obj);
         }
 
-        assets.appendChild(media);
+        debug.innerText = "🎯 Escena lista";
+
+      } catch (err) {
+        console.error(err);
+        debug.innerText = "💥 Error";
       }
-
-      // ===== OBJETO =====
-      let obj;
-
-      if (isVideo) {
-
-        obj = document.createElement("a-video");
-        obj.setAttribute("src", "#" + id);
-        obj.setAttribute("width", "1");
-        obj.setAttribute("height", "0.6");
-
-      } else {
-
-        obj = document.createElement("a-image");
-        obj.setAttribute("src", "#" + id);
-        obj.setAttribute("width", "1");
-      }
-
-      obj.setAttribute("position",
-        `${el.position.x} ${el.position.y} ${el.position.z}`
-      );
-
-      obj.setAttribute("scale",
-        `${el.scale.x} ${el.scale.y} ${el.scale.z}`
-      );
-
-      root.appendChild(obj);
     }
 
-    debug.innerText = "🎯 Escena lista";
+    cargarEscena();
 
-  } catch (err) {
-    console.error(err);
-    debug.innerText = "💥 Error";
-  }
-}
-
-cargarEscena();
-
-</script>
+  </script>
 
 </body>
+
 </html>
