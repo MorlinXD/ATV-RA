@@ -421,22 +421,40 @@
 
             if (assetSeleccionado.type === "png_sequence") {
 
+                // congelar asset actual
+                const currentAsset = { ...assetSeleccionado };
+
                 obj = document.createElement("a-image");
+
                 obj.setAttribute("width", "1");
 
                 let frame = 1;
 
                 function getFrame(n) {
-                    return `./assets/${assetSeleccionado.prefix}${String(n).padStart(4, "0")}.png`;
+
+                    return `./assets/${currentAsset.prefix}${String(n).padStart(4, "0")}.png`;
                 }
 
                 obj.setAttribute("src", getFrame(1));
 
-                setInterval(() => {
+                const interval = setInterval(() => {
+
+                    // limpiar interval si se elimina
+                    if (!document.body.contains(obj)) {
+                        clearInterval(interval);
+                        return;
+                    }
+
                     frame++;
-                    if (frame > assetSeleccionado.frames) frame = 1;
+
+                    if (frame > currentAsset.frames) {
+                        frame = 1;
+                    }
+
                     obj.setAttribute("src", getFrame(frame));
+
                 }, 1000 / 24);
+
 
             } else if (assetSeleccionado.type === "video") {
 
@@ -478,7 +496,7 @@
             elementos.forEach(el => {
                 const div = document.createElement("div");
                 div.className = "item";
-                div.innerText = el.id;
+                div.innerText = `${el.id} - ${el.asset}`;
 
                 if (seleccionado && seleccionado.id === el.id) {
                     div.classList.add("active");
