@@ -177,6 +177,7 @@
         });
         // ===== CARGAR ESCENA =====
         function cargarEscena() {
+
             const input = document.getElementById("loadScene");
             const file = input.files[0];
 
@@ -186,11 +187,11 @@
             }
 
             const reader = new FileReader();
-            let obj;
 
-            reader.onload = function (e) {
+            reader.onload = async function (e) {
 
                 try {
+
                     const data = JSON.parse(e.target.result);
 
                     if (!data.elementos) {
@@ -198,68 +199,124 @@
                         return;
                     }
 
-                    // limpiar escena actual
+                    // limpiar escena
                     document.querySelectorAll("#root > *").forEach(el => el.remove());
 
                     elementos = [];
                     contador = 0;
                     seleccionado = null;
-                    renderLista();
 
-                    // reconstruir
+                    // cargar assets.json
+                    const res = await fetch("assets.json");
+                    const assets = await res.json();
+
                     data.elementos.forEach((elData) => {
 
                         const id = elData.id;
-                        let obj;
 
-                        const assetId = "asset_" + elData.asset.replace(/\W/g, "_");
+                        // buscar asset REAL
+                        const assetInfo = assets.find(a => a.name === elData.asset);
 
-                        // detectar si es video
-                        const isVideo = /\.(mp4|mov|webm|ogg)$/i.test(elData.asset);
-
-                        // crear asset si no existe
-                        if (!document.getElementById(assetId)) {
-
-                            const el = document.createElement(isVideo ? "video" : "img");
-
-                            el.src = "./assets/" + elData.asset;
-                            el.id = assetId;
-
-                            if (isVideo) {
-                                el.loop = true;
-                                el.muted = true;
-                                el.autoplay = true;
-                                el.playsInline = true;
-                                el.crossOrigin = "anonymous";
-                            }
-
-                            document.getElementById("assets").appendChild(el);
+                        if (!assetInfo) {
+                            console.warn("Asset no encontrado:", elData.asset);
+                            return;
                         }
 
-                        // recrear objeto
-                        if (isVideo) {
+                        let obj;
 
-                            obj = document.createElement("a-plane");
-
-                            obj.setAttribute("material", {
-                                shader: "chromakey",
-                                src: "#" + assetId,
-                                color: chromaColor || "#00ff00",
-                                similarity: 0.45,
-                                smoothness: 0.12
-                            });
-
-                            obj.setAttribute("width", "1");
-                            obj.setAttribute("height", "0.6");
-
-                        } else {
+                        // ===== PNG SEQUENCE =====
+                        if (assetInfo.type === "png_sequence") {
 
                             obj = document.createElement("a-image");
+
+                            obj.setAttribute("width", "1");
+
+                            let frame = 1;
+
+                            function getFrame(n) {
+                                return `./assets/${assetInfo.prefix}${String(n).padStart(4, "0")}.png`;
+                            }
+
+                            obj.setAttribute("src", getFrame(1));
+
+                            // animación independiente
+                            const interval = setInterval(() => {
+
+                                if (!document.body.contains(obj)) {
+                                    clearInterval(interval);
+                                    return;
+                                }
+
+                                frame++;
+
+                                if (frame > assetInfo.frames) {
+                                    frame = 1;
+                                }
+
+                                obj.setAttribute("src", getFrame(frame));
+
+                            }, 1000 / 24);
+
+                        }
+
+                        // ===== VIDEO =====
+                        else if (assetInfo.type === "video") {
+
+                            const assetId =
+                                "asset_" + assetInfo.name.replace(/\W/g, "_");
+
+                            if (!document.getElementById(assetId)) {
+
+                                const video = document.createElement("video");
+
+                                video.src = "./assets/" + assetInfo.name;
+                                video.id = assetId;
+
+                                video.loop = true;
+                                video.muted = true;
+                                video.autoplay = true;
+                                video.playsInline = true;
+                                video.crossOrigin = "anonymous";
+
+                                document
+                                    .getElementById("assets")
+                                    .appendChild(video);
+                            }
+
+                            obj = document.createElement("a-video");
+
+                            obj.setAttribute("src", "#" + assetId);
+                            obj.setAttribute("width", "1");
+
+                        }
+
+                        // ===== IMAGEN =====
+                        else {
+
+                            const assetId =
+                                "asset_" + assetInfo.name.replace(/\W/g, "_");
+
+                            if (!document.getElementById(assetId)) {
+
+                                const img = document.createElement("img");
+
+                                img.src = "./assets/" + assetInfo.name;
+                                img.id = assetId;
+
+                                document
+                                    .getElementById("assets")
+                                    .appendChild(img);
+                            }
+
+                            obj = document.createElement("a-image");
+
                             obj.setAttribute("src", "#" + assetId);
                             obj.setAttribute("width", "1");
                         }
 
+                        // ===== CONFIG GENERAL =====
                         obj.setAttribute("id", id);
+
                         obj.classList.add("draggable");
 
                         obj.setAttribute(
@@ -274,15 +331,17 @@
 
                         document.getElementById("root").appendChild(obj);
 
+                        // guardar correctamente
                         elementos.push({
                             id,
-                            asset: assetSeleccionado.name,
-                            type: assetSeleccionado.type,
-                            prefix: assetSeleccionado.prefix,
-                            frames: assetSeleccionado.frames,
-                            position: { x: 0, y: 0, z: 0.01 },
-                            scale: { x: 1, y: 1, z: 1 }
+                            asset: assetInfo.name,
+                            type: assetInfo.type,
+                            prefix: assetInfo.prefix || null,
+                            frames: assetInfo.frames || null,
+                            position: elData.position,
+                            scale: elData.scale
                         });
+
                         contador++;
                     });
 
@@ -291,13 +350,14 @@
                     console.log("✅ Escena cargada correctamente");
 
                 } catch (err) {
+
                     console.error(err);
                     alert("Error al leer el JSON");
                 }
             };
+
             reader.readAsText(file);
         }
-
         // ===== GALERÍA =====
         async function cargarGaleria() {
             const res = await fetch("assets.json");
