@@ -9,8 +9,8 @@
   <!-- AFRAME -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
-  <!-- MINDAR -->
-  <script src="https://unpkg.com/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+  <!-- MINDAR LOCAL RECOMENDADO -->
+  <script src="./libs/mindar-image-aframe.prod.js"></script>
 
   <style>
     body {
@@ -95,61 +95,34 @@
       maxTrack: 4;
     "
     color-space="sRGB"
-    renderer="colorManagement: true; physicallyCorrectLights"
+    renderer="colorManagement: true;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
+    embedded
   >
 
-    <!-- ASSETS -->
     <a-assets id="assets"></a-assets>
 
-    <!-- CAMERA -->
     <a-camera
       position="0 0 0"
       look-controls="enabled: false"
     ></a-camera>
 
-    <!-- ===================================================== -->
-    <!-- TARGET 0 -->
-    <!-- ===================================================== -->
+    <!-- TARGETS -->
 
-    <a-entity
-      mindar-image-target="targetIndex: 0"
-      id="target0"
-    >
+    <a-entity mindar-image-target="targetIndex: 0" id="target0">
       <a-entity id="root0" visible="false"></a-entity>
     </a-entity>
 
-    <!-- ===================================================== -->
-    <!-- TARGET 1 -->
-    <!-- ===================================================== -->
-
-    <a-entity
-      mindar-image-target="targetIndex: 1"
-      id="target1"
-    >
+    <a-entity mindar-image-target="targetIndex: 1" id="target1">
       <a-entity id="root1" visible="false"></a-entity>
     </a-entity>
 
-    <!-- ===================================================== -->
-    <!-- TARGET 2 -->
-    <!-- ===================================================== -->
-
-    <a-entity
-      mindar-image-target="targetIndex: 2"
-      id="target2"
-    >
+    <a-entity mindar-image-target="targetIndex: 2" id="target2">
       <a-entity id="root2" visible="false"></a-entity>
     </a-entity>
 
-    <!-- ===================================================== -->
-    <!-- TARGET 3 -->
-    <!-- ===================================================== -->
-
-    <a-entity
-      mindar-image-target="targetIndex: 3"
-      id="target3"
-    >
+    <a-entity mindar-image-target="targetIndex: 3" id="target3">
       <a-entity id="root3" visible="false"></a-entity>
     </a-entity>
 
@@ -157,66 +130,65 @@
 
   <script>
 
-    // =========================================================
-    // REFERENCIAS
-    // =========================================================
-
     const debug = document.getElementById("debug");
     const startBtn = document.getElementById("startBtn");
     const sceneEl = document.getElementById("scene");
     const assets = document.getElementById("assets");
 
-    // =========================================================
+    // =====================================================
     // TARGETS
-    // =========================================================
+    // =====================================================
 
     const targets = [
       {
         target: document.getElementById("target0"),
         root: document.getElementById("root0"),
-        escena: "escena0.json",
+        escena: "./escena0.json",
         nombre: "Mural 0"
       },
       {
         target: document.getElementById("target1"),
         root: document.getElementById("root1"),
-        escena: "escena1.json",
+        escena: "./escena1.json",
         nombre: "Mural 1"
       },
       {
         target: document.getElementById("target2"),
         root: document.getElementById("root2"),
-        escena: "escena2.json",
+        escena: "./escena2.json",
         nombre: "Mural 2"
       },
       {
         target: document.getElementById("target3"),
         root: document.getElementById("root3"),
-        escena: "escena3.json",
+        escena: "./escena3.json",
         nombre: "Mural 3"
       }
     ];
 
-    // =========================================================
-    // CACHE ASSETS
-    // =========================================================
-
     const loadedAssets = new Set();
 
-    // =========================================================
+    // =====================================================
     // CARGAR ESCENA
-    // =========================================================
+    // =====================================================
 
     async function cargarEscena(jsonFile, root) {
 
       try {
 
-        debug.innerText = `📦 Cargando ${jsonFile}`;
-
         const res = await fetch(jsonFile);
+
+        if (!res.ok) {
+          throw new Error(`No existe ${jsonFile}`);
+        }
+
         const data = await res.json();
 
+        root.innerHTML = "";
+
         for (const el of data.elementos) {
+
+          let obj;
 
           const uniqueId =
             "asset_" +
@@ -225,20 +197,18 @@
 
           const isVideo =
             el.asset &&
-            el.asset.match(/\.(mp4|webm)$/i);
+            /\.(mp4|webm)$/i.test(el.asset);
 
-          let obj;
-
-          // =====================================================
+          // =================================================
           // PNG SEQUENCE
-          // =====================================================
+          // =================================================
 
           if (el.type === "png_sequence") {
 
-            const totalFrames = el.frames;
-            const prefix = el.prefix;
-
             let currentFrame = 1;
+
+            const totalFrames = el.frames || 1;
+            const fps = el.fps || 24;
 
             obj = document.createElement("a-image");
 
@@ -247,18 +217,19 @@
 
             function getFrame(frame) {
 
-              return `assets/${prefix}${String(frame).padStart(4, "0")}.png`;
+              return `assets/${el.prefix}${String(frame).padStart(4, "0")}.png`;
 
             }
 
             obj.setAttribute("src", getFrame(1));
 
-            const fps = el.fps || 24;
             const interval = 1000 / fps;
 
             let lastTime = 0;
 
             function animate(time) {
+
+              if (!obj.parentNode) return;
 
               if (time - lastTime >= interval) {
 
@@ -282,9 +253,9 @@
             requestAnimationFrame(animate);
           }
 
-          // =====================================================
+          // =================================================
           // VIDEO
-          // =====================================================
+          // =================================================
 
           else if (isVideo) {
 
@@ -292,10 +263,12 @@
 
               const video = document.createElement("video");
 
-              video.src = "assets/" + el.asset;
               video.id = uniqueId;
+              video.src = `assets/${el.asset}`;
+
               video.loop = true;
               video.muted = true;
+              video.autoplay = true;
               video.playsInline = true;
               video.crossOrigin = "anonymous";
               video.preload = "auto";
@@ -309,20 +282,13 @@
 
             obj.setAttribute("src", "#" + uniqueId);
 
-            obj.setAttribute(
-              "width",
-              el.width || 1
-            );
-
-            obj.setAttribute(
-              "height",
-              el.height || 0.6
-            );
+            obj.setAttribute("width", el.width || 1);
+            obj.setAttribute("height", el.height || 0.6);
           }
 
-          // =====================================================
-          // IMAGEN
-          // =====================================================
+          // =================================================
+          // IMAGE
+          // =================================================
 
           else {
 
@@ -330,8 +296,8 @@
 
               const img = document.createElement("img");
 
-              img.src = "assets/" + el.asset;
               img.id = uniqueId;
+              img.src = `assets/${el.asset}`;
 
               assets.appendChild(img);
 
@@ -340,65 +306,41 @@
 
             obj = document.createElement("a-image");
 
-            obj.setAttribute(
-              "src",
-              "#" + uniqueId
-            );
+            obj.setAttribute("src", "#" + uniqueId);
 
-            obj.setAttribute(
-              "width",
-              el.width || 1
-            );
-
-            obj.setAttribute(
-              "height",
-              el.height || 1
-            );
+            obj.setAttribute("width", el.width || 1);
+            obj.setAttribute("height", el.height || 1);
           }
 
-          // =====================================================
-          // TRANSFORMACIONES
-          // =====================================================
+          // =================================================
+          // TRANSFORM
+          // =================================================
 
           obj.setAttribute(
             "position",
-            `
-            ${el.position?.x || 0}
-            ${el.position?.y || 0}
-            ${el.position?.z || 0}
-            `
+            `${el.position?.x || 0}
+             ${el.position?.y || 0}
+             ${el.position?.z || 0}`
           );
 
           obj.setAttribute(
             "rotation",
-            `
-            ${el.rotation?.x || 0}
-            ${el.rotation?.y || 0}
-            ${el.rotation?.z || 0}
-            `
+            `${el.rotation?.x || 0}
+             ${el.rotation?.y || 0}
+             ${el.rotation?.z || 0}`
           );
 
           obj.setAttribute(
             "scale",
-            `
-            ${el.scale?.x || 1}
-            ${el.scale?.y || 1}
-            ${el.scale?.z || 1}
-            `
+            `${el.scale?.x || 1}
+             ${el.scale?.y || 1}
+             ${el.scale?.z || 1}`
           );
-
-          // =====================================================
-          // TRANSPARENCIA
-          // =====================================================
 
           obj.setAttribute(
             "material",
-            "transparent: true; alphaTest: 0.01;"
+            "transparent: true; alphaTest: 0.01; side: double;"
           );
-
-          // =====================================================
-          // AGREGAR AL ROOT
-          // =====================================================
 
           root.appendChild(obj);
         }
@@ -412,81 +354,57 @@
       }
     }
 
-    // =========================================================
+    // =====================================================
     // CONFIGURAR TARGETS
-    // =========================================================
+    // =====================================================
 
     async function inicializarTargets() {
 
-      for (let i = 0; i < targets.length; i++) {
-
-        const t = targets[i];
-
-        // =====================================================
-        // CARGAR ESCENA
-        // =====================================================
+      for (const t of targets) {
 
         await cargarEscena(
           t.escena,
           t.root
         );
 
-        // =====================================================
-        // TARGET FOUND
-        // =====================================================
+        t.target.addEventListener("targetFound", () => {
 
-        t.target.addEventListener(
-          "targetFound",
-          () => {
+          debug.innerText =
+            `✅ Detectado ${t.nombre}`;
 
-            debug.innerText =
-              `✅ Detectado ${t.nombre}`;
+          t.root.setAttribute(
+            "visible",
+            true
+          );
 
-            t.root.setAttribute(
-              "visible",
-              true
-            );
+          document
+            .querySelectorAll("video")
+            .forEach(v => {
+              v.play().catch(() => {});
+            });
 
-            // PLAY VIDEOS
+        });
 
-            document
-              .querySelectorAll("video")
-              .forEach(v => {
+        t.target.addEventListener("targetLost", () => {
 
-                v.play()
-                  .catch(() => { });
+          debug.innerText =
+            `❌ Perdido ${t.nombre}`;
 
-              });
+          t.root.setAttribute(
+            "visible",
+            false
+          );
 
-          }
-        );
-
-        // =====================================================
-        // TARGET LOST
-        // =====================================================
-
-        t.target.addEventListener(
-          "targetLost",
-          () => {
-
-            debug.innerText =
-              `❌ Perdido ${t.nombre}`;
-
-            t.root.setAttribute(
-              "visible",
-              false
-            );
-
-          }
-        );
+        });
       }
 
-      debug.innerText = "🎯 Targets listos";
+      debug.innerText =
+        "🎯 Targets listos";
     }
 
-    // =========================================================
+    // =====================================================
     // START EXPERIENCE
-    // =========================================================
+    // =====================================================
 
     startBtn.addEventListener(
       "click",
@@ -497,35 +415,41 @@
           startBtn.style.display = "none";
 
           debug.innerText =
-            "🚀 Iniciando cámara...";
+            "🚀 Inicializando...";
 
-          // ===========================================
-          // CARGAR TARGETS
-          // ===========================================
+          // ESPERAR SCENE COMPLETA
+
+          if (!sceneEl.hasLoaded) {
+
+            await new Promise(resolve => {
+
+              sceneEl.addEventListener(
+                "loaded",
+                resolve,
+                { once: true }
+              );
+
+            });
+          }
+
+          // CARGAR ESCENAS
 
           await inicializarTargets();
 
-          // ===========================================
-          // START MINDAR
-          // ===========================================
+          // OBTENER SISTEMA
 
           const mindarSystem =
             sceneEl.systems["mindar-image-system"];
 
+          if (!mindarSystem) {
+            throw new Error(
+              "MindAR no inicializado"
+            );
+          }
+
+          // START
+
           await mindarSystem.start();
-
-          // ===========================================
-          // AUTOPLAY VIDEOS
-          // ===========================================
-
-          document
-            .querySelectorAll("video")
-            .forEach(v => {
-
-              v.play()
-                .catch(() => { });
-
-            });
 
           debug.innerText =
             "📷 Escaneando murales";
