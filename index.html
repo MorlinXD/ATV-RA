@@ -2,17 +2,22 @@
 <html lang="es">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AR Murales</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AR Murales MultiTarget</title>
 
+  <!-- AFRAME -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+
+  <!-- MINDAR -->
   <script src="https://unpkg.com/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
     body {
       margin: 0;
       overflow: hidden;
+      background: black;
+      font-family: Arial, sans-serif;
     }
 
     #debug {
@@ -20,24 +25,27 @@
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.75);
       color: #00ffcc;
-      padding: 8px 16px;
-      border-radius: 10px;
-      font-family: monospace;
+      padding: 10px 18px;
+      border-radius: 12px;
       z-index: 999;
+      font-size: 14px;
+      backdrop-filter: blur(6px);
     }
 
     #msg {
       position: fixed;
-      bottom: 20px;
+      bottom: 25px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.65);
       color: white;
-      padding: 10px 20px;
+      padding: 12px 20px;
       border-radius: 20px;
       z-index: 999;
+      font-size: 15px;
+      backdrop-filter: blur(6px);
     }
 
     #startBtn {
@@ -45,94 +53,186 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      padding: 15px 25px;
+      padding: 18px 28px;
       background: #00ffcc;
       color: black;
       border: none;
       font-size: 18px;
-      border-radius: 10px;
+      font-weight: bold;
+      border-radius: 14px;
       z-index: 1000;
       cursor: pointer;
+      box-shadow: 0 0 25px rgba(0, 255, 204, 0.5);
     }
   </style>
 </head>
 
 <body>
 
-  <button id="startBtn">Iniciar experiencia</button>
+  <button id="startBtn">
+    Iniciar experiencia
+  </button>
 
-  <div id="msg">📷 Apunta al mural</div>
-  <div id="debug">Estado: iniciando...</div>
+  <div id="debug">
+    Estado: iniciando...
+  </div>
 
-  <a-scene mindar-image="
-  imageTargetSrc: ./assets/teclado.mind;
-  autoStart: false;
-  uiLoading: yes;
-  uiScanning: yes;
-" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+  <div id="msg">
+    📷 Apunta al mural
+  </div>
 
+  <!-- ===================================================== -->
+  <!-- SCENE -->
+  <!-- ===================================================== -->
+
+  <a-scene
+    id="scene"
+    mindar-image="
+      imageTargetSrc: ./assets/targets.mind;
+      autoStart: false;
+      uiLoading: yes;
+      uiScanning: yes;
+      maxTrack: 4;
+    "
+    color-space="sRGB"
+    renderer="colorManagement: true; physicallyCorrectLights"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+  >
+
+    <!-- ASSETS -->
     <a-assets id="assets"></a-assets>
 
-    <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+    <!-- CAMERA -->
+    <a-camera
+      position="0 0 0"
+      look-controls="enabled: false"
+    ></a-camera>
 
-    <a-entity mindar-image-target="targetIndex: 0" id="target">
-      <a-entity id="root" visible="false"></a-entity>
+    <!-- ===================================================== -->
+    <!-- TARGET 0 -->
+    <!-- ===================================================== -->
+
+    <a-entity
+      mindar-image-target="targetIndex: 0"
+      id="target0"
+    >
+      <a-entity id="root0" visible="false"></a-entity>
+    </a-entity>
+
+    <!-- ===================================================== -->
+    <!-- TARGET 1 -->
+    <!-- ===================================================== -->
+
+    <a-entity
+      mindar-image-target="targetIndex: 1"
+      id="target1"
+    >
+      <a-entity id="root1" visible="false"></a-entity>
+    </a-entity>
+
+    <!-- ===================================================== -->
+    <!-- TARGET 2 -->
+    <!-- ===================================================== -->
+
+    <a-entity
+      mindar-image-target="targetIndex: 2"
+      id="target2"
+    >
+      <a-entity id="root2" visible="false"></a-entity>
+    </a-entity>
+
+    <!-- ===================================================== -->
+    <!-- TARGET 3 -->
+    <!-- ===================================================== -->
+
+    <a-entity
+      mindar-image-target="targetIndex: 3"
+      id="target3"
+    >
+      <a-entity id="root3" visible="false"></a-entity>
     </a-entity>
 
   </a-scene>
 
   <script>
 
+    // =========================================================
+    // REFERENCIAS
+    // =========================================================
+
     const debug = document.getElementById("debug");
-    const target = document.getElementById("target");
-    const root = document.getElementById("root");
     const startBtn = document.getElementById("startBtn");
-    const sceneEl = document.querySelector("a-scene");
+    const sceneEl = document.getElementById("scene");
+    const assets = document.getElementById("assets");
 
-    // ===== BOTÓN INICIO
-    startBtn.addEventListener("click", async () => {
+    // =========================================================
+    // TARGETS
+    // =========================================================
 
-      startBtn.style.display = "none";
+    const targets = [
+      {
+        target: document.getElementById("target0"),
+        root: document.getElementById("root0"),
+        escena: "escena0.json",
+        nombre: "Mural 0"
+      },
+      {
+        target: document.getElementById("target1"),
+        root: document.getElementById("root1"),
+        escena: "escena1.json",
+        nombre: "Mural 1"
+      },
+      {
+        target: document.getElementById("target2"),
+        root: document.getElementById("root2"),
+        escena: "escena2.json",
+        nombre: "Mural 2"
+      },
+      {
+        target: document.getElementById("target3"),
+        root: document.getElementById("root3"),
+        escena: "escena3.json",
+        nombre: "Mural 3"
+      }
+    ];
 
-      await sceneEl.systems["mindar-image-system"].start();
+    // =========================================================
+    // CACHE ASSETS
+    // =========================================================
 
-      document.querySelectorAll("video").forEach(v => {
-        v.play().catch(() => { });
-      });
+    const loadedAssets = new Set();
 
-    });
+    // =========================================================
+    // CARGAR ESCENA
+    // =========================================================
 
-    // ===== TRACKING
-    target.addEventListener("targetFound", () => {
-      debug.innerText = "✅ Detectado";
-      root.setAttribute("visible", true);
-    });
-
-    target.addEventListener("targetLost", () => {
-      debug.innerText = "❌ Perdido";
-      root.setAttribute("visible", false);
-    });
-
-    // ===== CARGA ESCENA
-    async function cargarEscena() {
+    async function cargarEscena(jsonFile, root) {
 
       try {
 
-        debug.innerText = "📦 Cargando escena...";
+        debug.innerText = `📦 Cargando ${jsonFile}`;
 
-        const res = await fetch("escena.json");
+        const res = await fetch(jsonFile);
         const data = await res.json();
-
-        const assets = document.getElementById("assets");
 
         for (const el of data.elementos) {
 
-          const id = "asset_" + (el.asset || "seq_" + Math.random()).replace(/\W/g, "_");
-          const isVideo = el.asset && el.asset.match(/\.(mp4|webm)$/i);
+          const uniqueId =
+            "asset_" +
+            (el.asset || el.prefix || Math.random())
+              .replace(/\W/g, "_");
+
+          const isVideo =
+            el.asset &&
+            el.asset.match(/\.(mp4|webm)$/i);
 
           let obj;
 
-          // ===== PNG SEQUENCE
+          // =====================================================
+          // PNG SEQUENCE
+          // =====================================================
+
           if (el.type === "png_sequence") {
 
             const totalFrames = el.frames;
@@ -141,92 +241,305 @@
             let currentFrame = 1;
 
             obj = document.createElement("a-image");
-            obj.setAttribute("width", "1");
 
-            function getFrame(n) {
-              return `assets/${prefix}${String(n).padStart(4, "0")}.png`;
+            obj.setAttribute("width", el.width || 1);
+            obj.setAttribute("height", el.height || 1);
+
+            function getFrame(frame) {
+
+              return `assets/${prefix}${String(frame).padStart(4, "0")}.png`;
+
             }
 
             obj.setAttribute("src", getFrame(1));
 
-            let lastTime = 0;
-            const fps = 24;
+            const fps = el.fps || 24;
             const interval = 1000 / fps;
 
-            function animar(time) {
+            let lastTime = 0;
+
+            function animate(time) {
 
               if (time - lastTime >= interval) {
-                currentFrame++;
-                if (currentFrame > totalFrames) currentFrame = 1;
 
-                obj.setAttribute("src", getFrame(currentFrame));
+                currentFrame++;
+
+                if (currentFrame > totalFrames) {
+                  currentFrame = 1;
+                }
+
+                obj.setAttribute(
+                  "src",
+                  getFrame(currentFrame)
+                );
 
                 lastTime = time;
               }
 
-              requestAnimationFrame(animar);
+              requestAnimationFrame(animate);
             }
 
-            requestAnimationFrame(animar);
-
+            requestAnimationFrame(animate);
           }
 
-          // ===== VIDEO
+          // =====================================================
+          // VIDEO
+          // =====================================================
+
           else if (isVideo) {
 
-            if (!document.getElementById(id)) {
-              const media = document.createElement("video");
-              media.src = "assets/" + el.asset;
-              media.id = id;
-              media.loop = true;
-              media.muted = true;
-              media.playsInline = true;
-              media.crossOrigin = "anonymous";
-              assets.appendChild(media);
+            if (!loadedAssets.has(uniqueId)) {
+
+              const video = document.createElement("video");
+
+              video.src = "assets/" + el.asset;
+              video.id = uniqueId;
+              video.loop = true;
+              video.muted = true;
+              video.playsInline = true;
+              video.crossOrigin = "anonymous";
+              video.preload = "auto";
+
+              assets.appendChild(video);
+
+              loadedAssets.add(uniqueId);
             }
 
             obj = document.createElement("a-video");
-            obj.setAttribute("src", "#" + id);
-            obj.setAttribute("width", "1");
-            obj.setAttribute("height", "0.6");
 
+            obj.setAttribute("src", "#" + uniqueId);
+
+            obj.setAttribute(
+              "width",
+              el.width || 1
+            );
+
+            obj.setAttribute(
+              "height",
+              el.height || 0.6
+            );
           }
 
-          // ===== IMAGEN
+          // =====================================================
+          // IMAGEN
+          // =====================================================
+
           else {
 
-            if (!document.getElementById(id)) {
-              const media = document.createElement("img");
-              media.src = "assets/" + el.asset;
-              media.id = id;
-              assets.appendChild(media);
+            if (!loadedAssets.has(uniqueId)) {
+
+              const img = document.createElement("img");
+
+              img.src = "assets/" + el.asset;
+              img.id = uniqueId;
+
+              assets.appendChild(img);
+
+              loadedAssets.add(uniqueId);
             }
 
             obj = document.createElement("a-image");
-            obj.setAttribute("src", "#" + id);
-            obj.setAttribute("width", "1");
+
+            obj.setAttribute(
+              "src",
+              "#" + uniqueId
+            );
+
+            obj.setAttribute(
+              "width",
+              el.width || 1
+            );
+
+            obj.setAttribute(
+              "height",
+              el.height || 1
+            );
           }
 
-          obj.setAttribute("position",
-            `${el.position.x} ${el.position.y} ${el.position.z}`
+          // =====================================================
+          // TRANSFORMACIONES
+          // =====================================================
+
+          obj.setAttribute(
+            "position",
+            `
+            ${el.position?.x || 0}
+            ${el.position?.y || 0}
+            ${el.position?.z || 0}
+            `
           );
 
-          obj.setAttribute("scale",
-            `${el.scale.x} ${el.scale.y} ${el.scale.z}`
+          obj.setAttribute(
+            "rotation",
+            `
+            ${el.rotation?.x || 0}
+            ${el.rotation?.y || 0}
+            ${el.rotation?.z || 0}
+            `
           );
+
+          obj.setAttribute(
+            "scale",
+            `
+            ${el.scale?.x || 1}
+            ${el.scale?.y || 1}
+            ${el.scale?.z || 1}
+            `
+          );
+
+          // =====================================================
+          // TRANSPARENCIA
+          // =====================================================
+
+          obj.setAttribute(
+            "material",
+            "transparent: true; alphaTest: 0.01;"
+          );
+
+          // =====================================================
+          // AGREGAR AL ROOT
+          // =====================================================
 
           root.appendChild(obj);
         }
 
-        debug.innerText = "🎯 Escena lista";
-
       } catch (err) {
+
         console.error(err);
-        debug.innerText = "💥 Error";
+
+        debug.innerText =
+          `💥 Error cargando ${jsonFile}`;
       }
     }
 
-    cargarEscena();
+    // =========================================================
+    // CONFIGURAR TARGETS
+    // =========================================================
+
+    async function inicializarTargets() {
+
+      for (let i = 0; i < targets.length; i++) {
+
+        const t = targets[i];
+
+        // =====================================================
+        // CARGAR ESCENA
+        // =====================================================
+
+        await cargarEscena(
+          t.escena,
+          t.root
+        );
+
+        // =====================================================
+        // TARGET FOUND
+        // =====================================================
+
+        t.target.addEventListener(
+          "targetFound",
+          () => {
+
+            debug.innerText =
+              `✅ Detectado ${t.nombre}`;
+
+            t.root.setAttribute(
+              "visible",
+              true
+            );
+
+            // PLAY VIDEOS
+
+            document
+              .querySelectorAll("video")
+              .forEach(v => {
+
+                v.play()
+                  .catch(() => { });
+
+              });
+
+          }
+        );
+
+        // =====================================================
+        // TARGET LOST
+        // =====================================================
+
+        t.target.addEventListener(
+          "targetLost",
+          () => {
+
+            debug.innerText =
+              `❌ Perdido ${t.nombre}`;
+
+            t.root.setAttribute(
+              "visible",
+              false
+            );
+
+          }
+        );
+      }
+
+      debug.innerText = "🎯 Targets listos";
+    }
+
+    // =========================================================
+    // START EXPERIENCE
+    // =========================================================
+
+    startBtn.addEventListener(
+      "click",
+      async () => {
+
+        try {
+
+          startBtn.style.display = "none";
+
+          debug.innerText =
+            "🚀 Iniciando cámara...";
+
+          // ===========================================
+          // CARGAR TARGETS
+          // ===========================================
+
+          await inicializarTargets();
+
+          // ===========================================
+          // START MINDAR
+          // ===========================================
+
+          const mindarSystem =
+            sceneEl.systems["mindar-image-system"];
+
+          await mindarSystem.start();
+
+          // ===========================================
+          // AUTOPLAY VIDEOS
+          // ===========================================
+
+          document
+            .querySelectorAll("video")
+            .forEach(v => {
+
+              v.play()
+                .catch(() => { });
+
+            });
+
+          debug.innerText =
+            "📷 Escaneando murales";
+
+        } catch (err) {
+
+          console.error(err);
+
+          debug.innerText =
+            "💥 Error iniciando";
+
+        }
+      }
+    );
 
   </script>
 
