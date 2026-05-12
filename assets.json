@@ -13,7 +13,7 @@
   { "name": "manos.mp4", "type": "video" },
   { "name": "nino.mp4", "type": "video"},
   { "name": "pajaro.mp4", "type": "video"},
-  { "name": "Anim Persona", "type": "png_sequence", "prefix": "persona/frame_", "frames": 121},
+  { "name": "Anim Persona", "type": "png_sequence", "prefix": "persona/frame_", "frames": 100},
   { "name": "Anim Cacao", "type": "png_sequence", "prefix": "señora/frame_", "frames": 121},
   { "name": "Anim Canoa", "type": "png_sequence", "prefix": "canoa/frame_", "frames": 121},
   { "name": "Anim Manos", "type": "png_sequence", "prefix": "pescado/frame_", "frames": 121},
