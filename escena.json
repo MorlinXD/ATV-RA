@@ -3,6 +3,8 @@
     {
       "id": "obj0",
       "asset": "Boceto realidad aumentada.webm",
+      "videoSafari": "Boceto realidad aumentada.mov",
+      "videoAndroid": "Boceto realidad aumentada.webm",
       "type": "video",
       "prefix": null,
       "frames": null,
