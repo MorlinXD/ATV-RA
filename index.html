@@ -13,11 +13,30 @@
   <script src="./libs/mindar-image-aframe.prod.js"></script>
 
   <style>
-    body {
+    * {
       margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
       overflow: hidden;
-      background: black;
+      background: #000;
       font-family: Arial, sans-serif;
+    }
+
+    a-scene {
+      width: 100% !important;
+      height: 100% !important;
+      display: block !important;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block !important;
     }
 
     #debug {
@@ -25,13 +44,14 @@
       top: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.75);
+      background: rgba(0, 0, 0, 0.85);
       color: #00ffcc;
       padding: 10px 18px;
       border-radius: 12px;
       z-index: 999;
       font-size: 14px;
       backdrop-filter: blur(6px);
+      border: 1px solid rgba(0, 255, 204, 0.3);
     }
 
     #msg {
@@ -39,13 +59,14 @@
       bottom: 25px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.65);
+      background: rgba(0, 0, 0, 0.85);
       color: white;
       padding: 12px 20px;
       border-radius: 20px;
       z-index: 999;
       font-size: 15px;
       backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     #startBtn {
@@ -63,6 +84,16 @@
       z-index: 1000;
       cursor: pointer;
       box-shadow: 0 0 25px rgba(0, 255, 204, 0.5);
+      transition: all 0.3s ease;
+    }
+
+    #startBtn:hover {
+      background: #00ffdd;
+      box-shadow: 0 0 35px rgba(0, 255, 204, 0.7);
+    }
+
+    #startBtn:active {
+      transform: translate(-50%, -50%) scale(0.95);
     }
   </style>
 </head>
@@ -99,6 +130,7 @@
       colorManagement: true;
       physicallyCorrectLights: true;
       antialias: true;
+      logarithmicDepthBuffer: true;
     "
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
@@ -106,12 +138,13 @@
   >
 
     <!-- ASSETS -->
-    <a-assets id="assets"></a-assets>
+    <a-assets id="assets" timeout="30000"></a-assets>
 
     <!-- CAMERA -->
     <a-camera
       position="0 0 0"
       look-controls="enabled: false"
+      wasd-controls="enabled: false"
     ></a-camera>
 
     <!-- TARGET -->
@@ -139,6 +172,7 @@
     const root = document.getElementById("root");
 
     let videoElement = null;
+    let isVideoReady = false;
 
     // =====================================================
     // CARGAR ESCENA
@@ -169,7 +203,7 @@
             /\.(mp4|webm)$/i.test(el.asset);
 
           // =================================================
-          // VIDEO
+          // VIDEO WEBM
           // =================================================
 
           if (isVideo) {
@@ -180,7 +214,7 @@
 
             videoElement.src = `assets/${el.asset}`;
 
-            // OPTIMIZACIONES
+            // OPTIMIZACIONES ESPECÍFICAS PARA WEBM
 
             videoElement.loop = true;
             videoElement.muted = true;
@@ -188,44 +222,88 @@
             videoElement.playsInline = true;
             videoElement.crossOrigin = "anonymous";
 
-            // CARGA RÁPIDA
-
-            videoElement.preload = "auto";
-
-            // iOS
-
+            // Permitir reproducción en iOS sin sonido
+            videoElement.preload = "metadata";
+            videoElement.setAttribute("playsinline", "");
             videoElement.setAttribute("webkit-playsinline", "true");
 
             assets.appendChild(videoElement);
 
-            // ESPERAR CARGA
+            debug.innerText = "🎬 Cargando video WebM...";
 
-            await new Promise((resolve) => {
+            // ESPERAR CARGA - MÚLTIPLES EVENTOS PARA WEBM
 
-              videoElement.addEventListener(
-                "loadeddata",
-                resolve,
-                { once: true }
-              );
+            await new Promise((resolve, reject) => {
+
+              let loadTimeout;
+
+              const clearListeners = () => {
+                clearTimeout(loadTimeout);
+                videoElement.removeEventListener("loadedmetadata", onLoadedMetadata);
+                videoElement.removeEventListener("loadeddata", onLoadedData);
+                videoElement.removeEventListener("canplay", onCanPlay);
+                videoElement.removeEventListener("error", onError);
+              };
+
+              const onLoadedMetadata = () => {
+                console.log("✓ loadedmetadata fired");
+                clearListeners();
+                isVideoReady = true;
+                debug.innerText = "✅ Video WebM listo";
+                resolve();
+              };
+
+              const onLoadedData = () => {
+                console.log("✓ loadeddata fired");
+                clearListeners();
+                isVideoReady = true;
+                debug.innerText = "✅ Video WebM listo";
+                resolve();
+              };
+
+              const onCanPlay = () => {
+                console.log("✓ canplay fired");
+                clearListeners();
+                isVideoReady = true;
+                debug.innerText = "✅ Video WebM listo";
+                resolve();
+              };
+
+              const onError = (e) => {
+                console.error("❌ Error en video:", videoElement.error);
+                clearListeners();
+                reject(new Error(`Error WebM: código ${videoElement.error?.code}`));
+              };
+
+              // Timeout más generoso para WebM
+              loadTimeout = setTimeout(() => {
+                console.warn("⚠ Timeout en carga, continuando de todas formas...");
+                clearListeners();
+                isVideoReady = true; // Asumir que está listo
+                debug.innerText = "⚠ Video (parcialmente cargado)";
+                resolve();
+              }, 5000);
+
+              // Escuchar múltiples eventos
+              videoElement.addEventListener("loadedmetadata", onLoadedMetadata, { once: true });
+              videoElement.addEventListener("loadeddata", onLoadedData, { once: true });
+              videoElement.addEventListener("canplay", onCanPlay, { once: true });
+              videoElement.addEventListener("error", onError, { once: true });
+
+              // Forzar carga
+              videoElement.load();
 
             });
 
             obj = document.createElement("a-video");
 
-            obj.setAttribute(
-              "src",
-              "#mainVideo"
-            );
+            obj.setAttribute("src", "#mainVideo");
+            obj.setAttribute("width", el.width || 3.5);
+            obj.setAttribute("height", el.height || 2.5);
+            
+            // Material optimizado para WebM
+            obj.setAttribute("material", "shader: flat; side: front;");
 
-            obj.setAttribute(
-              "width",
-              el.width || 1
-            );
-
-            obj.setAttribute(
-              "height",
-              el.height || 0.6
-            );
           }
 
           // =================================================
@@ -236,7 +314,7 @@
 
             const img = document.createElement("img");
 
-            img.id = "imgAsset";
+            img.id = `imgAsset_${Date.now()}`;
 
             img.src = `assets/${el.asset}`;
 
@@ -244,51 +322,37 @@
 
             obj = document.createElement("a-image");
 
-            obj.setAttribute(
-              "src",
-              "#imgAsset"
-            );
-
-            obj.setAttribute(
-              "width",
-              el.width || 1
-            );
-
-            obj.setAttribute(
-              "height",
-              el.height || 1
-            );
+            obj.setAttribute("src", `#${img.id}`);
+            obj.setAttribute("width", el.width || 1);
+            obj.setAttribute("height", el.height || 1);
           }
 
           // =================================================
           // TRANSFORM
           // =================================================
 
-          obj.setAttribute(
-            "position",
-            `${el.position?.x || 0}
-             ${el.position?.y || 0}
-             ${el.position?.z || 0}`
-          );
+          const posX = el.position?.x || 0;
+          const posY = el.position?.y || 0;
+          const posZ = el.position?.z || 0.01;
 
-          obj.setAttribute(
-            "rotation",
-            `${el.rotation?.x || 0}
-             ${el.rotation?.y || 0}
-             ${el.rotation?.z || 0}`
-          );
+          obj.setAttribute("position", `${posX} ${posY} ${posZ}`);
 
-          obj.setAttribute(
-            "scale",
-            `${el.scale?.x || 1}
-             ${el.scale?.y || 1}
-             ${el.scale?.z || 1}`
-          );
+          const rotX = el.rotation?.x || 0;
+          const rotY = el.rotation?.y || 0;
+          const rotZ = el.rotation?.z || 0;
 
-          obj.setAttribute(
-            "material",
-            "transparent: true; alphaTest: 0.01; side: double;"
-          );
+          obj.setAttribute("rotation", `${rotX} ${rotY} ${rotZ}`);
+
+          const scaleX = el.scale?.x || 1;
+          const scaleY = el.scale?.y || 1;
+          const scaleZ = el.scale?.z || 1;
+
+          obj.setAttribute("scale", `${scaleX} ${scaleY} ${scaleZ}`);
+
+          // Material transparente para otros elementos
+          if (!isVideo) {
+            obj.setAttribute("material", "transparent: true; alphaTest: 0.01; side: double;");
+          }
 
           root.appendChild(obj);
         }
@@ -299,7 +363,7 @@
 
         console.error(err);
 
-        debug.innerText = "💥 Error cargando escena";
+        debug.innerText = `💥 ${err.message}`;
       }
     }
 
@@ -315,24 +379,32 @@
 
           debug.innerText = "✅ Libreta detectada";
 
-          root.setAttribute(
-            "visible",
-            true
-          );
+          root.setAttribute("visible", true);
 
-          // REPRODUCIR VIDEO
+          // REPRODUCIR VIDEO CON MEJOR MANEJO
 
-          if (videoElement) {
+          if (videoElement && isVideoReady) {
 
             try {
 
               videoElement.currentTime = 0;
 
-              await videoElement.play();
+              const playPromise = videoElement.play();
+
+              if (playPromise !== undefined) {
+                playPromise
+                  .then(() => {
+                    console.log("▶ Video iniciado correctamente");
+                    debug.innerText = "▶ Video en reproducción";
+                  })
+                  .catch((err) => {
+                    console.warn("⚠ No se pudo reproducir:", err);
+                    debug.innerText = "⚠ Error reproduciendo video";
+                  });
+              }
 
             } catch (e) {
-
-              console.log(e);
+              console.error("Error reproduciendo video:", e);
             }
           }
         }
@@ -344,18 +416,23 @@
 
           debug.innerText = "❌ Libreta perdida";
 
-          root.setAttribute(
-            "visible",
-            false
-          );
+          root.setAttribute("visible", false);
 
           if (videoElement) {
-
             videoElement.pause();
+            videoElement.currentTime = 0;
           }
         }
       );
     }
+
+    // =====================================================
+    // PREVENT BODY SCROLL
+    // =====================================================
+
+    document.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+    }, { passive: false });
 
     // =====================================================
     // START
@@ -410,15 +487,15 @@
 
           await mindarSystem.start();
 
-          debug.innerText =
-            "📷 Escaneando libreta";
+          debug.innerText = "📷 Escaneando libreta";
 
         } catch (err) {
 
           console.error(err);
 
-          debug.innerText =
-            "💥 Error iniciando";
+          debug.innerText = `💥 ${err.message || "Error iniciando"}`;
+
+          startBtn.style.display = "block";
         }
       }
     );
