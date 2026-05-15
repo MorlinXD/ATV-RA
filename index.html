@@ -207,6 +207,96 @@
     let mediaStream = null;
 
     // =====================================================
+    // DETECTAR NAVEGADOR
+    // =====================================================
+
+    function detectarNavegador() {
+      const ua = navigator.userAgent.toLowerCase();
+      const isSafari = /safari/.test(ua) && !/chrome/.test(ua) && !/android/.test(ua);
+      const isAndroid = /android/.test(ua);
+      const isChrome = /chrome/.test(ua);
+      const isFirefox = /firefox/.test(ua);
+      const isIOS = /iphone|ipad|ipod/.test(ua);
+
+      return {
+        isSafari: isSafari || isIOS,
+        isAndroid: isAndroid,
+        isChrome: isChrome,
+        isFirefox: isFirefox,
+        isIOS: isIOS,
+        ua: ua
+      };
+    }
+
+    const browser = detectarNavegador();
+    console.log("🔍 Navegador detectado:", browser);
+
+    // =====================================================
+    // OBTENER FORMATO DE VIDEO SEGÚN NAVEGADOR
+    // =====================================================
+
+    function obtenerFormatoVideo(elementoJSON) {
+      // Si no es video, retornar null
+      if (!elementoJSON.asset || !/\.(mp4|webm|mov)$/i.test(elementoJSON.asset)) {
+        return null;
+      }
+
+      // Si hay un campo específico de video para diferentes navegadores
+      if (elementoJSON.videoSafari && browser.isSafari) {
+        return {
+          asset: elementoJSON.videoSafari,
+          tipo: "safari"
+        };
+      }
+
+      if (elementoJSON.videoAndroid && browser.isAndroid) {
+        return {
+          asset: elementoJSON.videoAndroid,
+          tipo: "android"
+        };
+      }
+
+      // Fallback a la lógica original
+      const asset = elementoJSON.asset;
+      
+      if (browser.isSafari && /\.mov$/i.test(asset)) {
+        return {
+          asset: asset,
+          tipo: "safari"
+        };
+      }
+
+      if (browser.isAndroid && /\.webm$/i.test(asset)) {
+        return {
+          asset: asset,
+          tipo: "android"
+        };
+      }
+
+      // Si Safari pero no tiene .mov, buscar .webm
+      if (browser.isSafari && /\.webm$/i.test(asset)) {
+        return {
+          asset: asset,
+          tipo: "safari-webm"
+        };
+      }
+
+      // Si Android pero no tiene .webm, buscar .mov
+      if (browser.isAndroid && /\.mov$/i.test(asset)) {
+        return {
+          asset: asset,
+          tipo: "android-mov"
+        };
+      }
+
+      // Retornar el asset original
+      return {
+        asset: asset,
+        tipo: "default"
+      };
+    }
+
+    // =====================================================
     // CARGAR ESCENA
     // =====================================================
 
@@ -230,23 +320,23 @@
 
           let obj;
 
-          const isVideo =
-            el.asset &&
-            /\.(mp4|webm)$/i.test(el.asset);
+          const videoInfo = obtenerFormatoVideo(el);
 
           // =================================================
-          // VIDEO WEBM CON TRANSPARENCIA
+          // VIDEO
           // =================================================
 
-          if (isVideo) {
+          if (videoInfo) {
 
             videoElement = document.createElement("video");
 
             videoElement.id = "mainVideo";
 
-            videoElement.src = `assets/${el.asset}`;
+            videoElement.src = `assets/${videoInfo.asset}`;
 
-            // OPTIMIZACIONES ESPECÍFICAS PARA WEBM CON ALPHA
+            console.log(`🎬 Cargando video (${videoInfo.tipo}):`, videoInfo.asset);
+
+            // OPTIMIZACIONES
 
             videoElement.loop = true;
             videoElement.muted = true;
@@ -261,9 +351,9 @@
 
             assets.appendChild(videoElement);
 
-            debug.innerText = "🎬 Cargando video WebM...";
+            debug.innerText = `🎬 Cargando video (${videoInfo.tipo})...`;
 
-            // ESPERAR CARGA - MÚLTIPLES EVENTOS PARA WEBM
+            // ESPERAR CARGA - MÚLTIPLES EVENTOS
 
             await new Promise((resolve, reject) => {
 
@@ -281,7 +371,7 @@
                 console.log("✓ loadedmetadata fired");
                 clearListeners();
                 isVideoReady = true;
-                debug.innerText = "✅ Video WebM listo";
+                debug.innerText = `✅ Video (${videoInfo.tipo}) listo`;
                 resolve();
               };
 
@@ -289,7 +379,7 @@
                 console.log("✓ loadeddata fired");
                 clearListeners();
                 isVideoReady = true;
-                debug.innerText = "✅ Video WebM listo";
+                debug.innerText = `✅ Video (${videoInfo.tipo}) listo`;
                 resolve();
               };
 
@@ -297,22 +387,22 @@
                 console.log("✓ canplay fired");
                 clearListeners();
                 isVideoReady = true;
-                debug.innerText = "✅ Video WebM listo";
+                debug.innerText = `✅ Video (${videoInfo.tipo}) listo`;
                 resolve();
               };
 
               const onError = (e) => {
                 console.error("❌ Error en video:", videoElement.error);
                 clearListeners();
-                reject(new Error(`Error WebM: código ${videoElement.error?.code}`));
+                reject(new Error(`Error ${videoInfo.tipo}: código ${videoElement.error?.code}`));
               };
 
-              // Timeout más generoso para WebM
+              // Timeout más generoso
               loadTimeout = setTimeout(() => {
                 console.warn("⚠ Timeout en carga, continuando de todas formas...");
                 clearListeners();
-                isVideoReady = true; // Asumir que está listo
-                debug.innerText = "⚠ Video (parcialmente cargado)";
+                isVideoReady = true;
+                debug.innerText = `⚠ Video (${videoInfo.tipo}, parcialmente cargado)`;
                 resolve();
               }, 5000);
 
@@ -385,7 +475,7 @@
           obj.setAttribute("scale", `${scaleX} ${scaleY} ${scaleZ}`);
 
           // Material transparente para otros elementos
-          if (!isVideo) {
+          if (!videoInfo) {
             obj.setAttribute("material", "transparent: true; alphaTest: 0.01; side: double;");
           }
 
@@ -526,6 +616,8 @@
           startBtn.style.display = "none";
 
           debug.innerText = "🚀 Inicializando...";
+
+          console.log("📱 Dispositivo:", browser.isSafari ? "Safari/iOS" : browser.isAndroid ? "Android" : "Otro");
 
           // ESPERAR SCENE
 
