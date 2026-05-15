@@ -27,21 +27,32 @@
       font-family: Arial, sans-serif;
     }
 
+    #videoFeed {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+      z-index: 1;
+      display: none;
+    }
+
     a-scene {
       width: 100% !important;
       height: 100% !important;
       display: block !important;
-      position: absolute !important;
+      position: fixed !important;
       top: 0 !important;
       left: 0 !important;
+      z-index: 10 !important;
     }
 
-    /* Forzar que el canvas de Three.js sea visible */
     canvas {
       width: 100% !important;
       height: 100% !important;
       display: block !important;
-      background: #000 !important;
     }
 
     #debug {
@@ -104,20 +115,18 @@
     #startBtn:active {
       transform: translate(-50%, -50%) scale(0.95);
     }
-
-    /* Asegurar que MindAR UI sea visible */
-    .mindar-ui {
-      z-index: 1 !important;
-    }
-
-    .mindar-ui-loading,
-    .mindar-ui-scanning {
-      z-index: 1 !important;
-    }
   </style>
 </head>
 
 <body>
+
+  <!-- VIDEO FEED VISIBLE EN BACKGROUND -->
+  <video
+    id="videoFeed"
+    autoplay
+    playsinline
+    muted
+  ></video>
 
   <button id="startBtn">
     Iniciar experiencia
@@ -185,6 +194,7 @@
 
     const debug = document.getElementById("debug");
     const startBtn = document.getElementById("startBtn");
+    const videoFeed = document.getElementById("videoFeed");
 
     const sceneEl = document.getElementById("scene");
     const assets = document.getElementById("assets");
@@ -194,6 +204,7 @@
 
     let videoElement = null;
     let isVideoReady = false;
+    let mediaStream = null;
 
     // =====================================================
     // CARGAR ESCENA
@@ -250,7 +261,7 @@
 
             assets.appendChild(videoElement);
 
-            debug.innerText = "🎬 Cargando video WebM con transparencia...";
+            debug.innerText = "🎬 Cargando video WebM...";
 
             // ESPERAR CARGA - MÚLTIPLES EVENTOS PARA WEBM
 
@@ -270,7 +281,7 @@
                 console.log("✓ loadedmetadata fired");
                 clearListeners();
                 isVideoReady = true;
-                debug.innerText = "✅ Video WebM listo (con transparencia)";
+                debug.innerText = "✅ Video WebM listo";
                 resolve();
               };
 
@@ -278,7 +289,7 @@
                 console.log("✓ loadeddata fired");
                 clearListeners();
                 isVideoReady = true;
-                debug.innerText = "✅ Video WebM listo (con transparencia)";
+                debug.innerText = "✅ Video WebM listo";
                 resolve();
               };
 
@@ -286,7 +297,7 @@
                 console.log("✓ canplay fired");
                 clearListeners();
                 isVideoReady = true;
-                debug.innerText = "✅ Video WebM listo (con transparencia)";
+                debug.innerText = "✅ Video WebM listo";
                 resolve();
               };
 
@@ -322,7 +333,7 @@
             obj.setAttribute("width", el.width || 3.5);
             obj.setAttribute("height", el.height || 2.5);
             
-            // ✅ MATERIAL CON SOPORTE COMPLETO PARA TRANSPARENCIA
+            // Material con transparencia
             obj.setAttribute(
               "material",
               "shader: flat; side: double; transparent: true; alphaTest: 0.01; opacity: 1.0;"
@@ -405,7 +416,7 @@
 
           root.setAttribute("visible", true);
 
-          // REPRODUCIR VIDEO CON MEJOR MANEJO
+          // REPRODUCIR VIDEO
 
           if (videoElement && isVideoReady) {
 
@@ -419,7 +430,7 @@
                 playPromise
                   .then(() => {
                     console.log("▶ Video iniciado correctamente");
-                    debug.innerText = "▶ Video en reproducción (transparencia activa)";
+                    debug.innerText = "▶ Video en reproducción";
                   })
                   .catch((err) => {
                     console.warn("⚠ No se pudo reproducir:", err);
@@ -451,7 +462,7 @@
     }
 
     // =====================================================
-    // SOLICITAR PERMISOS DE CÁMARA
+    // SOLICITAR PERMISOS DE CÁMARA Y OBTENER STREAM
     // =====================================================
 
     async function solicitarPermisosCamara() {
@@ -467,13 +478,14 @@
           audio: false
         };
 
-        // Solicitar permisos
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        // Solicitar permisos y obtener stream
+        mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
         
-        // Detener el stream (solo necesitábamos el permiso)
-        stream.getTracks().forEach(track => track.stop());
+        // Asignar stream al video element para mostrarlo
+        videoFeed.srcObject = mediaStream;
+        videoFeed.style.display = "block";
         
-        console.log("✓ Permisos de cámara otorgados");
+        console.log("✓ Permisos de cámara otorgados y stream visible");
         return true;
 
       } catch (err) {
@@ -485,6 +497,8 @@
           throw new Error("No se encontró cámara en el dispositivo");
         } else if (err.name === "NotReadableError") {
           throw new Error("Cámara en uso por otra aplicación");
+        } else if (err.name === "OverconstrainedError") {
+          throw new Error("Especificaciones de cámara no soportadas");
         } else {
           throw new Error(`Permiso de cámara: ${err.message}`);
         }
@@ -528,11 +542,11 @@
             });
           }
 
-          // SOLICITAR PERMISOS DE CÁMARA
+          // SOLICITAR PERMISOS DE CÁMARA Y OBTENER STREAM
           
           await solicitarPermisosCamara();
 
-          debug.innerText = "✅ Permisos otorgados";
+          debug.innerText = "✅ Cámara visible";
 
           // CARGAR ESCENA
 
@@ -554,7 +568,7 @@
             );
           }
 
-          debug.innerText = "🎥 Abriendo cámara...";
+          debug.innerText = "🎥 Inicializando escaneo...";
 
           // START CAMERA - CON REINTENTOS
 
@@ -564,14 +578,14 @@
           while (intentos < maxIntentos) {
             try {
               await mindarSystem.start();
-              console.log("✓ Cámara iniciada");
+              console.log("✓ MindAR iniciado");
               break;
             } catch (err) {
               intentos++;
               console.warn(`Intento ${intentos} fallido:`, err);
               
               if (intentos >= maxIntentos) {
-                throw new Error(`No se pudo abrir la cámara (${err.message})`);
+                throw new Error(`No se pudo iniciar MindAR (${err.message})`);
               }
               
               // Esperar un poco antes de reintentar
@@ -588,9 +602,25 @@
           debug.innerText = `💥 ${err.message || "Error iniciando"}`;
 
           startBtn.style.display = "block";
+          
+          // Detener stream en caso de error
+          if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+            videoFeed.style.display = "none";
+          }
         }
       }
     );
+
+    // =====================================================
+    // CLEANUP AL SALIR
+    // =====================================================
+
+    window.addEventListener("beforeunload", () => {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+      }
+    });
 
   </script>
 
