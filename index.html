@@ -224,7 +224,7 @@
             /\.(mp4|webm)$/i.test(el.asset);
 
           // =================================================
-          // VIDEO WEBM
+          // VIDEO WEBM CON TRANSPARENCIA
           // =================================================
 
           if (isVideo) {
@@ -235,7 +235,7 @@
 
             videoElement.src = `assets/${el.asset}`;
 
-            // OPTIMIZACIONES ESPECÍFICAS PARA WEBM
+            // OPTIMIZACIONES ESPECÍFICAS PARA WEBM CON ALPHA
 
             videoElement.loop = true;
             videoElement.muted = true;
@@ -250,7 +250,7 @@
 
             assets.appendChild(videoElement);
 
-            debug.innerText = "🎬 Cargando video WebM...";
+            debug.innerText = "🎬 Cargando video WebM con transparencia...";
 
             // ESPERAR CARGA - MÚLTIPLES EVENTOS PARA WEBM
 
@@ -270,7 +270,7 @@
                 console.log("✓ loadedmetadata fired");
                 clearListeners();
                 isVideoReady = true;
-                debug.innerText = "✅ Video WebM listo";
+                debug.innerText = "✅ Video WebM listo (con transparencia)";
                 resolve();
               };
 
@@ -278,7 +278,7 @@
                 console.log("✓ loadeddata fired");
                 clearListeners();
                 isVideoReady = true;
-                debug.innerText = "✅ Video WebM listo";
+                debug.innerText = "✅ Video WebM listo (con transparencia)";
                 resolve();
               };
 
@@ -286,7 +286,7 @@
                 console.log("✓ canplay fired");
                 clearListeners();
                 isVideoReady = true;
-                debug.innerText = "✅ Video WebM listo";
+                debug.innerText = "✅ Video WebM listo (con transparencia)";
                 resolve();
               };
 
@@ -322,8 +322,11 @@
             obj.setAttribute("width", el.width || 3.5);
             obj.setAttribute("height", el.height || 2.5);
             
-            // Material optimizado para WebM
-            obj.setAttribute("material", "shader: flat; side: front;");
+            // ✅ MATERIAL CON SOPORTE COMPLETO PARA TRANSPARENCIA
+            obj.setAttribute(
+              "material",
+              "shader: flat; side: double; transparent: true; alphaTest: 0.01; opacity: 1.0;"
+            );
 
           }
 
@@ -416,7 +419,7 @@
                 playPromise
                   .then(() => {
                     console.log("▶ Video iniciado correctamente");
-                    debug.innerText = "▶ Video en reproducción";
+                    debug.innerText = "▶ Video en reproducción (transparencia activa)";
                   })
                   .catch((err) => {
                     console.warn("⚠ No se pudo reproducir:", err);
