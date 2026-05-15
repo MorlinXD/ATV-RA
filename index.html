@@ -31,12 +31,17 @@
       width: 100% !important;
       height: 100% !important;
       display: block !important;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
     }
 
+    /* Forzar que el canvas de Three.js sea visible */
     canvas {
       width: 100% !important;
       height: 100% !important;
       display: block !important;
+      background: #000 !important;
     }
 
     #debug {
@@ -48,10 +53,12 @@
       color: #00ffcc;
       padding: 10px 18px;
       border-radius: 12px;
-      z-index: 999;
+      z-index: 10001;
       font-size: 14px;
       backdrop-filter: blur(6px);
       border: 1px solid rgba(0, 255, 204, 0.3);
+      pointer-events: none;
+      font-weight: bold;
     }
 
     #msg {
@@ -63,10 +70,11 @@
       color: white;
       padding: 12px 20px;
       border-radius: 20px;
-      z-index: 999;
+      z-index: 10001;
       font-size: 15px;
       backdrop-filter: blur(6px);
       border: 1px solid rgba(255, 255, 255, 0.2);
+      pointer-events: none;
     }
 
     #startBtn {
@@ -81,10 +89,11 @@
       font-size: 18px;
       font-weight: bold;
       border-radius: 14px;
-      z-index: 1000;
+      z-index: 10000;
       cursor: pointer;
       box-shadow: 0 0 25px rgba(0, 255, 204, 0.5);
       transition: all 0.3s ease;
+      pointer-events: auto;
     }
 
     #startBtn:hover {
@@ -94,6 +103,16 @@
 
     #startBtn:active {
       transform: translate(-50%, -50%) scale(0.95);
+    }
+
+    /* Asegurar que MindAR UI sea visible */
+    .mindar-ui {
+      z-index: 1 !important;
+    }
+
+    .mindar-ui-loading,
+    .mindar-ui-scanning {
+      z-index: 1 !important;
     }
   </style>
 </head>
@@ -131,6 +150,8 @@
       physicallyCorrectLights: true;
       antialias: true;
       logarithmicDepthBuffer: true;
+      alpha: true;
+      premultipliedAlpha: false;
     "
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
@@ -427,6 +448,47 @@
     }
 
     // =====================================================
+    // SOLICITAR PERMISOS DE CÁMARA
+    // =====================================================
+
+    async function solicitarPermisosCamara() {
+      try {
+        debug.innerText = "📷 Solicitando acceso a cámara...";
+        
+        const constraints = {
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: "environment"
+          },
+          audio: false
+        };
+
+        // Solicitar permisos
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        // Detener el stream (solo necesitábamos el permiso)
+        stream.getTracks().forEach(track => track.stop());
+        
+        console.log("✓ Permisos de cámara otorgados");
+        return true;
+
+      } catch (err) {
+        console.error("Error de permisos:", err);
+        
+        if (err.name === "NotAllowedError") {
+          throw new Error("Cámara rechazada por el usuario");
+        } else if (err.name === "NotFoundError") {
+          throw new Error("No se encontró cámara en el dispositivo");
+        } else if (err.name === "NotReadableError") {
+          throw new Error("Cámara en uso por otra aplicación");
+        } else {
+          throw new Error(`Permiso de cámara: ${err.message}`);
+        }
+      }
+    }
+
+    // =====================================================
     // PREVENT BODY SCROLL
     // =====================================================
 
@@ -463,6 +525,12 @@
             });
           }
 
+          // SOLICITAR PERMISOS DE CÁMARA
+          
+          await solicitarPermisosCamara();
+
+          debug.innerText = "✅ Permisos otorgados";
+
           // CARGAR ESCENA
 
           await cargarEscena();
@@ -483,9 +551,30 @@
             );
           }
 
-          // START CAMERA
+          debug.innerText = "🎥 Abriendo cámara...";
 
-          await mindarSystem.start();
+          // START CAMERA - CON REINTENTOS
+
+          let intentos = 0;
+          const maxIntentos = 3;
+
+          while (intentos < maxIntentos) {
+            try {
+              await mindarSystem.start();
+              console.log("✓ Cámara iniciada");
+              break;
+            } catch (err) {
+              intentos++;
+              console.warn(`Intento ${intentos} fallido:`, err);
+              
+              if (intentos >= maxIntentos) {
+                throw new Error(`No se pudo abrir la cámara (${err.message})`);
+              }
+              
+              // Esperar un poco antes de reintentar
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          }
 
           debug.innerText = "📷 Escaneando libreta";
 
