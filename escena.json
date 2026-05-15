@@ -1,0 +1,21 @@
+{
+  "elementos": [
+    {
+      "id": "obj0",
+      "asset": "Boceto realidad aumentada.webm",
+      "type": "video",
+      "prefix": null,
+      "frames": null,
+      "position": {
+        "x": 0,
+        "y": 0,
+        "z": 0.01
+      },
+      "scale": {
+        "x": 3.5,
+        "y": 2.5,
+        "z": 1
+      }
+    }
+  ]
+}

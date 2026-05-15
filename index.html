@@ -4,12 +4,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AR Murales MultiTarget</title>
+  <title>AR Libreta</title>
 
   <!-- AFRAME -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
 
-  <!-- MINDAR  -->
+  <!-- MINDAR -->
   <script src="./libs/mindar-image-aframe.prod.js"></script>
 
   <style>
@@ -78,7 +78,7 @@
   </div>
 
   <div id="msg">
-    📷 Apunta al mural
+    📷 Apunta a la libreta
   </div>
 
   <!-- ===================================================== -->
@@ -88,42 +88,41 @@
   <a-scene
     id="scene"
     mindar-image="
-      imageTargetSrc: ./assets/targets.mind;
+      imageTargetSrc: ./assets/libreta.mind;
       autoStart: false;
       uiLoading: yes;
       uiScanning: yes;
-      maxTrack: 4;
+      maxTrack: 1;
     "
     color-space="sRGB"
-    renderer="colorManagement: true;"
+    renderer="
+      colorManagement: true;
+      physicallyCorrectLights: true;
+      antialias: true;
+    "
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
     embedded
   >
 
+    <!-- ASSETS -->
     <a-assets id="assets"></a-assets>
 
+    <!-- CAMERA -->
     <a-camera
       position="0 0 0"
       look-controls="enabled: false"
     ></a-camera>
 
-    <!-- TARGETS -->
-
-    <a-entity mindar-image-target="targetIndex: 0" id="target0">
-      <a-entity id="root0" visible="false"></a-entity>
-    </a-entity>
-
-    <a-entity mindar-image-target="targetIndex: 1" id="target1">
-      <a-entity id="root1" visible="false"></a-entity>
-    </a-entity>
-
-    <a-entity mindar-image-target="targetIndex: 2" id="target2">
-      <a-entity id="root2" visible="false"></a-entity>
-    </a-entity>
-
-    <a-entity mindar-image-target="targetIndex: 3" id="target3">
-      <a-entity id="root3" visible="false"></a-entity>
+    <!-- TARGET -->
+    <a-entity
+      id="target"
+      mindar-image-target="targetIndex: 0"
+    >
+      <a-entity
+        id="root"
+        visible="false"
+      ></a-entity>
     </a-entity>
 
   </a-scene>
@@ -132,54 +131,29 @@
 
     const debug = document.getElementById("debug");
     const startBtn = document.getElementById("startBtn");
+
     const sceneEl = document.getElementById("scene");
     const assets = document.getElementById("assets");
 
-    // =====================================================
-    // TARGETS
-    // =====================================================
+    const target = document.getElementById("target");
+    const root = document.getElementById("root");
 
-    const targets = [
-      {
-        target: document.getElementById("target0"),
-        root: document.getElementById("root0"),
-        escena: "./escena0.json",
-        nombre: "Mural 0"
-      },
-      {
-        target: document.getElementById("target1"),
-        root: document.getElementById("root1"),
-        escena: "./escena1.json",
-        nombre: "Mural 1"
-      },
-      {
-        target: document.getElementById("target2"),
-        root: document.getElementById("root2"),
-        escena: "./escena2.json",
-        nombre: "Mural 2"
-      },
-      {
-        target: document.getElementById("target3"),
-        root: document.getElementById("root3"),
-        escena: "./escena3.json",
-        nombre: "Mural 3"
-      }
-    ];
-
-    const loadedAssets = new Set();
+    let videoElement = null;
 
     // =====================================================
     // CARGAR ESCENA
     // =====================================================
 
-    async function cargarEscena(jsonFile, root) {
+    async function cargarEscena() {
 
       try {
 
-        const res = await fetch(jsonFile);
+        debug.innerText = "📦 Cargando escena...";
+
+        const res = await fetch("./escena.json");
 
         if (!res.ok) {
-          throw new Error(`No existe ${jsonFile}`);
+          throw new Error("No existe escena.json");
         }
 
         const data = await res.json();
@@ -190,126 +164,100 @@
 
           let obj;
 
-          const uniqueId =
-            "asset_" +
-            (el.asset || el.prefix || Math.random())
-              .replace(/\W/g, "_");
-
           const isVideo =
             el.asset &&
             /\.(mp4|webm)$/i.test(el.asset);
 
           // =================================================
-          // PNG SEQUENCE
-          // =================================================
-
-          if (el.type === "png_sequence") {
-
-            let currentFrame = 1;
-
-            const totalFrames = el.frames || 1;
-            const fps = el.fps || 24;
-
-            obj = document.createElement("a-image");
-
-            obj.setAttribute("width", el.width || 1);
-            obj.setAttribute("height", el.height || 1);
-
-            function getFrame(frame) {
-
-              return `assets/${el.prefix}${String(frame).padStart(4, "0")}.png`;
-
-            }
-
-            obj.setAttribute("src", getFrame(1));
-
-            const interval = 1000 / fps;
-
-            let lastTime = 0;
-
-            function animate(time) {
-
-              if (!obj.parentNode) return;
-
-              if (time - lastTime >= interval) {
-
-                currentFrame++;
-
-                if (currentFrame > totalFrames) {
-                  currentFrame = 1;
-                }
-
-                obj.setAttribute(
-                  "src",
-                  getFrame(currentFrame)
-                );
-
-                lastTime = time;
-              }
-
-              requestAnimationFrame(animate);
-            }
-
-            requestAnimationFrame(animate);
-          }
-
-          // =================================================
           // VIDEO
           // =================================================
 
-          else if (isVideo) {
+          if (isVideo) {
 
-            if (!loadedAssets.has(uniqueId)) {
+            videoElement = document.createElement("video");
 
-              const video = document.createElement("video");
+            videoElement.id = "mainVideo";
 
-              video.id = uniqueId;
-              video.src = `assets/${el.asset}`;
+            videoElement.src = `assets/${el.asset}`;
 
-              video.loop = true;
-              video.muted = true;
-              video.autoplay = true;
-              video.playsInline = true;
-              video.crossOrigin = "anonymous";
-              video.preload = "auto";
+            // OPTIMIZACIONES
 
-              assets.appendChild(video);
+            videoElement.loop = true;
+            videoElement.muted = true;
+            videoElement.autoplay = false;
+            videoElement.playsInline = true;
+            videoElement.crossOrigin = "anonymous";
 
-              loadedAssets.add(uniqueId);
-            }
+            // CARGA RÁPIDA
+
+            videoElement.preload = "auto";
+
+            // iOS
+
+            videoElement.setAttribute("webkit-playsinline", "true");
+
+            assets.appendChild(videoElement);
+
+            // ESPERAR CARGA
+
+            await new Promise((resolve) => {
+
+              videoElement.addEventListener(
+                "loadeddata",
+                resolve,
+                { once: true }
+              );
+
+            });
 
             obj = document.createElement("a-video");
 
-            obj.setAttribute("src", "#" + uniqueId);
+            obj.setAttribute(
+              "src",
+              "#mainVideo"
+            );
 
-            obj.setAttribute("width", el.width || 1);
-            obj.setAttribute("height", el.height || 0.6);
+            obj.setAttribute(
+              "width",
+              el.width || 1
+            );
+
+            obj.setAttribute(
+              "height",
+              el.height || 0.6
+            );
           }
 
           // =================================================
-          // IMAGE
+          // IMAGEN
           // =================================================
 
           else {
 
-            if (!loadedAssets.has(uniqueId)) {
+            const img = document.createElement("img");
 
-              const img = document.createElement("img");
+            img.id = "imgAsset";
 
-              img.id = uniqueId;
-              img.src = `assets/${el.asset}`;
+            img.src = `assets/${el.asset}`;
 
-              assets.appendChild(img);
-
-              loadedAssets.add(uniqueId);
-            }
+            assets.appendChild(img);
 
             obj = document.createElement("a-image");
 
-            obj.setAttribute("src", "#" + uniqueId);
+            obj.setAttribute(
+              "src",
+              "#imgAsset"
+            );
 
-            obj.setAttribute("width", el.width || 1);
-            obj.setAttribute("height", el.height || 1);
+            obj.setAttribute(
+              "width",
+              el.width || 1
+            );
+
+            obj.setAttribute(
+              "height",
+              el.height || 1
+            );
           }
 
           // =================================================
@@ -345,65 +293,72 @@
           root.appendChild(obj);
         }
 
+        debug.innerText = "✅ Escena cargada";
+
       } catch (err) {
 
         console.error(err);
 
-        debug.innerText =
-          `💥 Error cargando ${jsonFile}`;
+        debug.innerText = "💥 Error cargando escena";
       }
     }
 
     // =====================================================
-    // CONFIGURAR TARGETS
+    // TARGET EVENTS
     // =====================================================
 
-    async function inicializarTargets() {
+    function configurarTarget() {
 
-      for (const t of targets) {
+      target.addEventListener(
+        "targetFound",
+        async () => {
 
-        await cargarEscena(
-          t.escena,
-          t.root
-        );
+          debug.innerText = "✅ Libreta detectada";
 
-        t.target.addEventListener("targetFound", () => {
-
-          debug.innerText =
-            `✅ Detectado ${t.nombre}`;
-
-          t.root.setAttribute(
+          root.setAttribute(
             "visible",
             true
           );
 
-          document
-            .querySelectorAll("video")
-            .forEach(v => {
-              v.play().catch(() => {});
-            });
+          // REPRODUCIR VIDEO
 
-        });
+          if (videoElement) {
 
-        t.target.addEventListener("targetLost", () => {
+            try {
 
-          debug.innerText =
-            `❌ Perdido ${t.nombre}`;
+              videoElement.currentTime = 0;
 
-          t.root.setAttribute(
+              await videoElement.play();
+
+            } catch (e) {
+
+              console.log(e);
+            }
+          }
+        }
+      );
+
+      target.addEventListener(
+        "targetLost",
+        () => {
+
+          debug.innerText = "❌ Libreta perdida";
+
+          root.setAttribute(
             "visible",
             false
           );
 
-        });
-      }
+          if (videoElement) {
 
-      debug.innerText =
-        "🎯 Targets listos";
+            videoElement.pause();
+          }
+        }
+      );
     }
 
     // =====================================================
-    // START EXPERIENCE
+    // START
     // =====================================================
 
     startBtn.addEventListener(
@@ -414,10 +369,9 @@
 
           startBtn.style.display = "none";
 
-          debug.innerText =
-            "🚀 Inicializando...";
+          debug.innerText = "🚀 Inicializando...";
 
-          // ESPERAR SCENE COMPLETA
+          // ESPERAR SCENE
 
           if (!sceneEl.hasLoaded) {
 
@@ -432,27 +386,32 @@
             });
           }
 
-          // CARGAR ESCENAS
+          // CARGAR ESCENA
 
-          await inicializarTargets();
+          await cargarEscena();
 
-          // OBTENER SISTEMA
+          // CONFIGURAR TARGET
+
+          configurarTarget();
+
+          // MINDAR
 
           const mindarSystem =
             sceneEl.systems["mindar-image-system"];
 
           if (!mindarSystem) {
+
             throw new Error(
               "MindAR no inicializado"
             );
           }
 
-          // START
+          // START CAMERA
 
           await mindarSystem.start();
 
           debug.innerText =
-            "📷 Escaneando murales";
+            "📷 Escaneando libreta";
 
         } catch (err) {
 
@@ -460,7 +419,6 @@
 
           debug.innerText =
             "💥 Error iniciando";
-
         }
       }
     );
