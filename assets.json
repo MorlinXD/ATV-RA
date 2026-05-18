@@ -19,5 +19,6 @@
   { "name": "Anim Manos", "type": "png_sequence", "prefix": "pescado/frame_", "frames": 121},
   { "name": "Anim Nino", "type": "png_sequence", "prefix": "nino/frame_", "frames": 121},
   { "name": "Anim Pajaro", "type": "png_sequence", "prefix": "pajarito/frame_", "frames": 121},
-  { "name": "Boceto realidad aumentada.webm", "type": "video" }
+  { "name": "Boceto realidad aumentada.webm", "type": "video" },
+  { "name": "Anim Realidad Aumentada", "type": "png_sequence", "prefix": "realidad_aumentada/frame_", "frames": 480}
 ]
