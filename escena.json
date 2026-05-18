@@ -2,17 +2,23 @@
   "elementos": [
     {
       "id": "obj0",
+
+      "type": "png_sequence",
+
       "asset": "Boceto realidad aumentada.webm",
-      "videoSafari": "Boceto realidad aumentada.mov",
-      "videoAndroid": "Boceto realidad aumentada.webm",
-      "type": "video",
-      "prefix": null,
-      "frames": null,
+
+      "prefix": "Video RA/frame_",
+
+      "frames": 480,
+
+      "fps": 24,
+
       "position": {
         "x": 0,
         "y": 0,
         "z": 0.01
       },
+
       "scale": {
         "x": 1.5,
         "y": 1,
