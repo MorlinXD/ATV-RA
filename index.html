@@ -230,88 +230,82 @@
     // PNG SEQUENCE
     // =====================================================
 
-    function crearPNGSequence(el) {
+function crearPNGSequence(el) {
 
-      const obj =
-        document.createElement("a-image");
+  const obj =
+    document.createElement("a-image");
 
-      obj.setAttribute(
-        "width",
-        el.width || 1
-      );
+  obj.setAttribute(
+    "width",
+    el.width || 1
+  );
 
-      obj.setAttribute(
-        "height",
-        el.height || 1
-      );
+  obj.setAttribute(
+    "height",
+    el.height || 1
+  );
 
-      obj.setAttribute(
-        "material",
-        "transparent: true; alphaTest: 0.01; side: double;"
-      );
+  obj.setAttribute(
+    "material",
+    "transparent: true; alphaTest: 0.01; side: double;"
+  );
 
-      const totalFrames =
-        el.frames || 1;
+  const totalFrames =
+    el.frames || 1;
 
-      const fps =
-        el.fps || 24;
+  const fps =
+    el.fps || 24;
 
-      let currentFrame = 1;
+  let currentFrame = 1;
 
-      const frameSources = [];
+  function getFrame(frame) {
 
-      // PRECARGAR
+    return `assets/${el.prefix}${String(frame).padStart(4, "0")}.png`;
 
-      for (let i = 1; i <= totalFrames; i++) {
+  }
 
-        const src =
-          `assets/${el.prefix}${String(i).padStart(4, "0")}.png`;
+  // FRAME INICIAL
 
-        frameSources.push(src);
+  obj.setAttribute(
+    "src",
+    getFrame(1)
+  );
 
-        const img = new Image();
+  // SOLO CARGA EL FRAME ACTUAL
 
-        img.src = src;
+  const interval =
+    1000 / fps;
+
+  let lastTime = 0;
+
+  function animate(time) {
+
+    if (!obj.parentNode) return;
+
+    if (time - lastTime >= interval) {
+
+      currentFrame++;
+
+      if (currentFrame > totalFrames) {
+        currentFrame = 1;
       }
 
       obj.setAttribute(
         "src",
-        frameSources[0]
+        getFrame(currentFrame)
       );
 
-      const interval =
-        1000 / fps;
-
-      let lastTime = 0;
-
-      function animate(time) {
-
-        if (!obj.parentNode) return;
-
-        if (time - lastTime >= interval) {
-
-          currentFrame++;
-
-          if (currentFrame > totalFrames) {
-            currentFrame = 1;
-          }
-
-          obj.setAttribute(
-            "src",
-            frameSources[currentFrame - 1]
-          );
-
-          lastTime = time;
-        }
-
-        sequenceAnimationId =
-          requestAnimationFrame(animate);
-      }
-
-      requestAnimationFrame(animate);
-
-      return obj;
+      lastTime = time;
     }
+
+    sequenceAnimationId =
+      requestAnimationFrame(animate);
+  }
+
+  requestAnimationFrame(animate);
+
+  return obj;
+}
 
     // =====================================================
     // VIDEO
