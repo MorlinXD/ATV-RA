@@ -19,7 +19,8 @@
       box-sizing: border-box;
     }
 
-    html, body {
+    html,
+    body {
       width: 100%;
       height: 100%;
       overflow: hidden;
@@ -29,8 +30,7 @@
 
     #videoFeed {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
@@ -40,19 +40,16 @@
     }
 
     a-scene {
+      position: fixed !important;
+      inset: 0 !important;
       width: 100% !important;
       height: 100% !important;
-      display: block !important;
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
       z-index: 10 !important;
     }
 
     canvas {
       width: 100% !important;
       height: 100% !important;
-      display: block !important;
     }
 
     #debug {
@@ -67,9 +64,8 @@
       z-index: 10001;
       font-size: 14px;
       backdrop-filter: blur(6px);
-      border: 1px solid rgba(0, 255, 204, 0.3);
-      pointer-events: none;
       font-weight: bold;
+      pointer-events: none;
     }
 
     #msg {
@@ -84,7 +80,6 @@
       z-index: 10001;
       font-size: 15px;
       backdrop-filter: blur(6px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
       pointer-events: none;
     }
 
@@ -103,29 +98,18 @@
       z-index: 10000;
       cursor: pointer;
       box-shadow: 0 0 25px rgba(0, 255, 204, 0.5);
-      transition: all 0.3s ease;
-      pointer-events: auto;
-    }
-
-    #startBtn:hover {
-      background: #00ffdd;
-      box-shadow: 0 0 35px rgba(0, 255, 204, 0.7);
-    }
-
-    #startBtn:active {
-      transform: translate(-50%, -50%) scale(0.95);
     }
   </style>
 </head>
 
 <body>
 
-  <!-- VIDEO FEED VISIBLE EN BACKGROUND -->
+  <!-- FEED -->
   <video
     id="videoFeed"
     autoplay
-    playsinline
     muted
+    playsinline
   ></video>
 
   <button id="startBtn">
@@ -158,26 +142,21 @@
       colorManagement: true;
       physicallyCorrectLights: true;
       antialias: true;
-      logarithmicDepthBuffer: true;
       alpha: true;
-      premultipliedAlpha: false;
     "
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
     embedded
   >
 
-    <!-- ASSETS -->
-    <a-assets id="assets" timeout="30000"></a-assets>
+    <a-assets id="assets"></a-assets>
 
-    <!-- CAMERA -->
     <a-camera
       position="0 0 0"
       look-controls="enabled: false"
       wasd-controls="enabled: false"
     ></a-camera>
 
-    <!-- TARGET -->
     <a-entity
       id="target"
       mindar-image-target="targetIndex: 0"
@@ -203,97 +182,205 @@
     const root = document.getElementById("root");
 
     let videoElement = null;
-    let isVideoReady = false;
     let mediaStream = null;
+    let sequenceAnimationId = null;
 
     // =====================================================
-    // DETECTAR NAVEGADOR
+    // DETECTAR IOS
     // =====================================================
 
-    function detectarNavegador() {
-      const ua = navigator.userAgent.toLowerCase();
-      const isSafari = /safari/.test(ua) && !/chrome/.test(ua) && !/android/.test(ua);
-      const isAndroid = /android/.test(ua);
-      const isChrome = /chrome/.test(ua);
-      const isFirefox = /firefox/.test(ua);
-      const isIOS = /iphone|ipad|ipod/.test(ua);
+    function esIOS() {
 
-      return {
-        isSafari: isSafari || isIOS,
-        isAndroid: isAndroid,
-        isChrome: isChrome,
-        isFirefox: isFirefox,
-        isIOS: isIOS,
-        ua: ua
-      };
+      return /iphone|ipad|ipod/i.test(
+        navigator.userAgent
+      );
     }
 
-    const browser = detectarNavegador();
-    console.log("🔍 Navegador detectado:", browser);
+    const isIOS = esIOS();
+
+    console.log(
+      "📱 iOS:",
+      isIOS
+    );
 
     // =====================================================
-    // OBTENER FORMATO DE VIDEO SEGÚN NAVEGADOR
+    // CÁMARA
     // =====================================================
 
-    function obtenerFormatoVideo(elementoJSON) {
-      // Si no es video, retornar null
-      if (!elementoJSON.asset || !/\.(mp4|webm|mov)$/i.test(elementoJSON.asset)) {
-        return null;
+    async function iniciarCamara() {
+
+      mediaStream =
+        await navigator.mediaDevices.getUserMedia({
+
+          video: {
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+
+          audio: false
+        });
+
+      videoFeed.srcObject = mediaStream;
+
+      videoFeed.style.display = "block";
+    }
+
+    // =====================================================
+    // PNG SEQUENCE
+    // =====================================================
+
+    function crearPNGSequence(el) {
+
+      const obj =
+        document.createElement("a-image");
+
+      obj.setAttribute(
+        "width",
+        el.width || 1
+      );
+
+      obj.setAttribute(
+        "height",
+        el.height || 1
+      );
+
+      obj.setAttribute(
+        "material",
+        "transparent: true; alphaTest: 0.01; side: double;"
+      );
+
+      const totalFrames =
+        el.frames || 1;
+
+      const fps =
+        el.fps || 24;
+
+      let currentFrame = 1;
+
+      const frameSources = [];
+
+      // PRECARGAR
+
+      for (let i = 1; i <= totalFrames; i++) {
+
+        const src =
+          `assets/${el.prefix}${String(i).padStart(4, "0")}.png`;
+
+        frameSources.push(src);
+
+        const img = new Image();
+
+        img.src = src;
       }
 
-      // Si hay un campo específico de video para diferentes navegadores
-      if (elementoJSON.videoSafari && browser.isSafari) {
-        return {
-          asset: elementoJSON.videoSafari,
-          tipo: "safari"
-        };
+      obj.setAttribute(
+        "src",
+        frameSources[0]
+      );
+
+      const interval =
+        1000 / fps;
+
+      let lastTime = 0;
+
+      function animate(time) {
+
+        if (!obj.parentNode) return;
+
+        if (time - lastTime >= interval) {
+
+          currentFrame++;
+
+          if (currentFrame > totalFrames) {
+            currentFrame = 1;
+          }
+
+          obj.setAttribute(
+            "src",
+            frameSources[currentFrame - 1]
+          );
+
+          lastTime = time;
+        }
+
+        sequenceAnimationId =
+          requestAnimationFrame(animate);
       }
 
-      if (elementoJSON.videoAndroid && browser.isAndroid) {
-        return {
-          asset: elementoJSON.videoAndroid,
-          tipo: "android"
-        };
-      }
+      requestAnimationFrame(animate);
 
-      // Fallback a la lógica original
-      const asset = elementoJSON.asset;
-      
-      if (browser.isSafari && /\.mov$/i.test(asset)) {
-        return {
-          asset: asset,
-          tipo: "safari"
-        };
-      }
+      return obj;
+    }
 
-      if (browser.isAndroid && /\.webm$/i.test(asset)) {
-        return {
-          asset: asset,
-          tipo: "android"
-        };
-      }
+    // =====================================================
+    // VIDEO
+    // =====================================================
 
-      // Si Safari pero no tiene .mov, buscar .webm
-      if (browser.isSafari && /\.webm$/i.test(asset)) {
-        return {
-          asset: asset,
-          tipo: "safari-webm"
-        };
-      }
+    async function crearVideo(el) {
 
-      // Si Android pero no tiene .webm, buscar .mov
-      if (browser.isAndroid && /\.mov$/i.test(asset)) {
-        return {
-          asset: asset,
-          tipo: "android-mov"
-        };
-      }
+      videoElement =
+        document.createElement("video");
 
-      // Retornar el asset original
-      return {
-        asset: asset,
-        tipo: "default"
-      };
+      videoElement.id = "mainVideo";
+
+      videoElement.src =
+        `assets/${el.asset}`;
+
+      videoElement.loop = true;
+      videoElement.muted = true;
+      videoElement.playsInline = true;
+      videoElement.crossOrigin = "anonymous";
+
+      videoElement.preload = "auto";
+
+      videoElement.setAttribute(
+        "playsinline",
+        ""
+      );
+
+      videoElement.setAttribute(
+        "webkit-playsinline",
+        "true"
+      );
+
+      assets.appendChild(videoElement);
+
+      await new Promise((resolve) => {
+
+        videoElement.addEventListener(
+          "loadeddata",
+          resolve,
+          { once: true }
+        );
+
+        videoElement.load();
+      });
+
+      const obj =
+        document.createElement("a-video");
+
+      obj.setAttribute(
+        "src",
+        "#mainVideo"
+      );
+
+      obj.setAttribute(
+        "width",
+        el.width || 1
+      );
+
+      obj.setAttribute(
+        "height",
+        el.height || 1
+      );
+
+      obj.setAttribute(
+        "material",
+        "shader: flat; side: double; transparent: true;"
+      );
+
+      return obj;
     }
 
     // =====================================================
@@ -302,194 +389,84 @@
 
     async function cargarEscena() {
 
-      try {
+      debug.innerText =
+        "📦 Cargando escena...";
 
-        debug.innerText = "📦 Cargando escena...";
+      const res =
+        await fetch("./escena.json");
 
-        const res = await fetch("./escena.json");
+      const data =
+        await res.json();
 
-        if (!res.ok) {
-          throw new Error("No existe escena.json");
+      root.innerHTML = "";
+
+      for (const el of data.elementos) {
+
+        let obj;
+
+        // =================================================
+        // IOS = PNG SEQUENCE
+        // =================================================
+
+        if (
+          isIOS &&
+          el.type === "png_sequence"
+        ) {
+
+          console.log(
+            "🍎 iOS → PNG Sequence"
+          );
+
+          obj =
+            crearPNGSequence(el);
         }
 
-        const data = await res.json();
+        // =================================================
+        // ANDROID / PC = VIDEO
+        // =================================================
 
-        root.innerHTML = "";
+        else {
 
-        for (const el of data.elementos) {
+          console.log(
+            "🎬 Android/Desktop → Video"
+          );
 
-          let obj;
-
-          const videoInfo = obtenerFormatoVideo(el);
-
-          // =================================================
-          // VIDEO
-          // =================================================
-
-          if (videoInfo) {
-
-            videoElement = document.createElement("video");
-
-            videoElement.id = "mainVideo";
-
-            videoElement.src = `assets/${videoInfo.asset}`;
-
-            console.log(`🎬 Cargando video (${videoInfo.tipo}):`, videoInfo.asset);
-
-            // OPTIMIZACIONES
-
-            videoElement.loop = true;
-            videoElement.muted = true;
-            videoElement.autoplay = false;
-            videoElement.playsInline = true;
-            videoElement.crossOrigin = "anonymous";
-
-            // Permitir reproducción en iOS sin sonido
-            videoElement.preload = "metadata";
-            videoElement.setAttribute("playsinline", "");
-            videoElement.setAttribute("webkit-playsinline", "true");
-
-            assets.appendChild(videoElement);
-
-            debug.innerText = `🎬 Cargando video (${videoInfo.tipo})...`;
-
-            // ESPERAR CARGA - MÚLTIPLES EVENTOS
-
-            await new Promise((resolve, reject) => {
-
-              let loadTimeout;
-
-              const clearListeners = () => {
-                clearTimeout(loadTimeout);
-                videoElement.removeEventListener("loadedmetadata", onLoadedMetadata);
-                videoElement.removeEventListener("loadeddata", onLoadedData);
-                videoElement.removeEventListener("canplay", onCanPlay);
-                videoElement.removeEventListener("error", onError);
-              };
-
-              const onLoadedMetadata = () => {
-                console.log("✓ loadedmetadata fired");
-                clearListeners();
-                isVideoReady = true;
-                debug.innerText = `✅ Video (${videoInfo.tipo}) listo`;
-                resolve();
-              };
-
-              const onLoadedData = () => {
-                console.log("✓ loadeddata fired");
-                clearListeners();
-                isVideoReady = true;
-                debug.innerText = `✅ Video (${videoInfo.tipo}) listo`;
-                resolve();
-              };
-
-              const onCanPlay = () => {
-                console.log("✓ canplay fired");
-                clearListeners();
-                isVideoReady = true;
-                debug.innerText = `✅ Video (${videoInfo.tipo}) listo`;
-                resolve();
-              };
-
-              const onError = (e) => {
-                console.error("❌ Error en video:", videoElement.error);
-                clearListeners();
-                reject(new Error(`Error ${videoInfo.tipo}: código ${videoElement.error?.code}`));
-              };
-
-              // Timeout más generoso
-              loadTimeout = setTimeout(() => {
-                console.warn("⚠ Timeout en carga, continuando de todas formas...");
-                clearListeners();
-                isVideoReady = true;
-                debug.innerText = `⚠ Video (${videoInfo.tipo}, parcialmente cargado)`;
-                resolve();
-              }, 5000);
-
-              // Escuchar múltiples eventos
-              videoElement.addEventListener("loadedmetadata", onLoadedMetadata, { once: true });
-              videoElement.addEventListener("loadeddata", onLoadedData, { once: true });
-              videoElement.addEventListener("canplay", onCanPlay, { once: true });
-              videoElement.addEventListener("error", onError, { once: true });
-
-              // Forzar carga
-              videoElement.load();
-
-            });
-
-            obj = document.createElement("a-video");
-
-            obj.setAttribute("src", "#mainVideo");
-            obj.setAttribute("width", el.width || 3.5);
-            obj.setAttribute("height", el.height || 2.5);
-            
-            // Material con transparencia
-            obj.setAttribute(
-              "material",
-              "shader: flat; side: double; transparent: true; alphaTest: 0.01; opacity: 1.0;"
-            );
-
-          }
-
-          // =================================================
-          // IMAGEN
-          // =================================================
-
-          else {
-
-            const img = document.createElement("img");
-
-            img.id = `imgAsset_${Date.now()}`;
-
-            img.src = `assets/${el.asset}`;
-
-            assets.appendChild(img);
-
-            obj = document.createElement("a-image");
-
-            obj.setAttribute("src", `#${img.id}`);
-            obj.setAttribute("width", el.width || 1);
-            obj.setAttribute("height", el.height || 1);
-          }
-
-          // =================================================
-          // TRANSFORM
-          // =================================================
-
-          const posX = el.position?.x || 0;
-          const posY = el.position?.y || 0;
-          const posZ = el.position?.z || 0.01;
-
-          obj.setAttribute("position", `${posX} ${posY} ${posZ}`);
-
-          const rotX = el.rotation?.x || 0;
-          const rotY = el.rotation?.y || 0;
-          const rotZ = el.rotation?.z || 0;
-
-          obj.setAttribute("rotation", `${rotX} ${rotY} ${rotZ}`);
-
-          const scaleX = el.scale?.x || 1;
-          const scaleY = el.scale?.y || 1;
-          const scaleZ = el.scale?.z || 1;
-
-          obj.setAttribute("scale", `${scaleX} ${scaleY} ${scaleZ}`);
-
-          // Material transparente para otros elementos
-          if (!videoInfo) {
-            obj.setAttribute("material", "transparent: true; alphaTest: 0.01; side: double;");
-          }
-
-          root.appendChild(obj);
+          obj =
+            await crearVideo(el);
         }
 
-        debug.innerText = "✅ Escena cargada";
+        // POSITION
 
-      } catch (err) {
+        obj.setAttribute(
+          "position",
+          `${el.position?.x || 0}
+           ${el.position?.y || 0}
+           ${el.position?.z || 0.01}`
+        );
 
-        console.error(err);
+        // ROTATION
 
-        debug.innerText = `💥 ${err.message}`;
+        obj.setAttribute(
+          "rotation",
+          `${el.rotation?.x || 0}
+           ${el.rotation?.y || 0}
+           ${el.rotation?.z || 0}`
+        );
+
+        // SCALE
+
+        obj.setAttribute(
+          "scale",
+          `${el.scale?.x || 1}
+           ${el.scale?.y || 1}
+           ${el.scale?.z || 1}`
+        );
+
+        root.appendChild(obj);
       }
+
+      debug.innerText =
+        "✅ Escena cargada";
     }
 
     // =====================================================
@@ -502,34 +479,28 @@
         "targetFound",
         async () => {
 
-          debug.innerText = "✅ Libreta detectada";
+          debug.innerText =
+            "✅ Libreta detectada";
 
-          root.setAttribute("visible", true);
+          root.setAttribute(
+            "visible",
+            true
+          );
 
-          // REPRODUCIR VIDEO
-
-          if (videoElement && isVideoReady) {
+          if (
+            videoElement &&
+            !isIOS
+          ) {
 
             try {
 
               videoElement.currentTime = 0;
 
-              const playPromise = videoElement.play();
+              await videoElement.play();
 
-              if (playPromise !== undefined) {
-                playPromise
-                  .then(() => {
-                    console.log("▶ Video iniciado correctamente");
-                    debug.innerText = "▶ Video en reproducción";
-                  })
-                  .catch((err) => {
-                    console.warn("⚠ No se pudo reproducir:", err);
-                    debug.innerText = "⚠ Error reproduciendo video";
-                  });
-              }
+            } catch (err) {
 
-            } catch (e) {
-              console.error("Error reproduciendo video:", e);
+              console.warn(err);
             }
           }
         }
@@ -539,69 +510,23 @@
         "targetLost",
         () => {
 
-          debug.innerText = "❌ Libreta perdida";
+          debug.innerText =
+            "❌ Libreta perdida";
 
-          root.setAttribute("visible", false);
+          root.setAttribute(
+            "visible",
+            false
+          );
 
           if (videoElement) {
+
             videoElement.pause();
+
             videoElement.currentTime = 0;
           }
         }
       );
     }
-
-    // =====================================================
-    // SOLICITAR PERMISOS DE CÁMARA Y OBTENER STREAM
-    // =====================================================
-
-    async function solicitarPermisosCamara() {
-      try {
-        debug.innerText = "📷 Solicitando acceso a cámara...";
-        
-        const constraints = {
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            facingMode: "environment"
-          },
-          audio: false
-        };
-
-        // Solicitar permisos y obtener stream
-        mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-        
-        // Asignar stream al video element para mostrarlo
-        videoFeed.srcObject = mediaStream;
-        videoFeed.style.display = "block";
-        
-        console.log("✓ Permisos de cámara otorgados y stream visible");
-        return true;
-
-      } catch (err) {
-        console.error("Error de permisos:", err);
-        
-        if (err.name === "NotAllowedError") {
-          throw new Error("Cámara rechazada por el usuario");
-        } else if (err.name === "NotFoundError") {
-          throw new Error("No se encontró cámara en el dispositivo");
-        } else if (err.name === "NotReadableError") {
-          throw new Error("Cámara en uso por otra aplicación");
-        } else if (err.name === "OverconstrainedError") {
-          throw new Error("Especificaciones de cámara no soportadas");
-        } else {
-          throw new Error(`Permiso de cámara: ${err.message}`);
-        }
-      }
-    }
-
-    // =====================================================
-    // PREVENT BODY SCROLL
-    // =====================================================
-
-    document.addEventListener("touchmove", (e) => {
-      e.preventDefault();
-    }, { passive: false });
 
     // =====================================================
     // START
@@ -615,15 +540,14 @@
 
           startBtn.style.display = "none";
 
-          debug.innerText = "🚀 Inicializando...";
-
-          console.log("📱 Dispositivo:", browser.isSafari ? "Safari/iOS" : browser.isAndroid ? "Android" : "Otro");
+          debug.innerText =
+            "🚀 Inicializando...";
 
           // ESPERAR SCENE
 
           if (!sceneEl.hasLoaded) {
 
-            await new Promise(resolve => {
+            await new Promise((resolve) => {
 
               sceneEl.addEventListener(
                 "loaded",
@@ -634,17 +558,15 @@
             });
           }
 
-          // SOLICITAR PERMISOS DE CÁMARA Y OBTENER STREAM
-          
-          await solicitarPermisosCamara();
+          // CÁMARA
 
-          debug.innerText = "✅ Cámara visible";
+          await iniciarCamara();
 
-          // CARGAR ESCENA
+          // ESCENA
 
           await cargarEscena();
 
-          // CONFIGURAR TARGET
+          // TARGET
 
           configurarTarget();
 
@@ -653,66 +575,47 @@
           const mindarSystem =
             sceneEl.systems["mindar-image-system"];
 
-          if (!mindarSystem) {
+          await mindarSystem.start();
 
-            throw new Error(
-              "MindAR no inicializado"
-            );
-          }
-
-          debug.innerText = "🎥 Inicializando escaneo...";
-
-          // START CAMERA - CON REINTENTOS
-
-          let intentos = 0;
-          const maxIntentos = 3;
-
-          while (intentos < maxIntentos) {
-            try {
-              await mindarSystem.start();
-              console.log("✓ MindAR iniciado");
-              break;
-            } catch (err) {
-              intentos++;
-              console.warn(`Intento ${intentos} fallido:`, err);
-              
-              if (intentos >= maxIntentos) {
-                throw new Error(`No se pudo iniciar MindAR (${err.message})`);
-              }
-              
-              // Esperar un poco antes de reintentar
-              await new Promise(resolve => setTimeout(resolve, 500));
-            }
-          }
-
-          debug.innerText = "📷 Escaneando libreta";
+          debug.innerText =
+            "📷 Escaneando libreta";
 
         } catch (err) {
 
           console.error(err);
 
-          debug.innerText = `💥 ${err.message || "Error iniciando"}`;
+          debug.innerText =
+            `💥 ${err.message}`;
 
-          startBtn.style.display = "block";
-          
-          // Detener stream en caso de error
-          if (mediaStream) {
-            mediaStream.getTracks().forEach(track => track.stop());
-            videoFeed.style.display = "none";
-          }
+          startBtn.style.display =
+            "block";
         }
       }
     );
 
     // =====================================================
-    // CLEANUP AL SALIR
+    // CLEANUP
     // =====================================================
 
-    window.addEventListener("beforeunload", () => {
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
+    window.addEventListener(
+      "beforeunload",
+      () => {
+
+        if (mediaStream) {
+
+          mediaStream
+            .getTracks()
+            .forEach(track => track.stop());
+        }
+
+        if (sequenceAnimationId) {
+
+          cancelAnimationFrame(
+            sequenceAnimationId
+          );
+        }
       }
-    });
+    );
 
   </script>
 
